@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint Planner</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f5f4f0; --bg3: #eeede8;
+  --text: #1a1a18; --text2: #6b6a65; --text3: #9e9d98;
+  --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+  --green: #1D9E75; --amber: #BA7517; --red: #E24B4A;
+  --blue: #378ADD; --blue-bg: #E6F1FB;
+  --radius: 8px; --radius-lg: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1c; --bg2: #2a2a28; --bg3: #323230;
+    --text: #f0efe8; --text2: #a0a09a; --text3: #6a6a64;
+    --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18);
+    --blue-bg: #0c2a45;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+.app { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+/* Topbar */
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; gap: 12px; flex-wrap: wrap; }
+.team-name-input { font-size: 22px; font-weight: 500; border: none; border-bottom: 1.5px solid var(--border2); background: transparent; color: var(--text); padding: 4px 0; width: 280px; outline: none; }
+.team-name-input:focus { border-bottom-color: var(--blue); }
+.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: transparent; color: var(--text); cursor: pointer; font-family: inherit; transition: background .15s; white-space: nowrap; }
+.btn:hover { background: var(--bg2); }
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn-primary:hover { opacity: 0.85; background: var(--text); }
+.btn-danger { color: var(--red); border-color: rgba(226,75,74,0.3); }
+.save-indicator { font-size: 11px; color: var(--text3); display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 12px; background: var(--bg2); white-space: nowrap; transition: opacity .15s; }
+.save-indicator::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--text3); }
+.save-indicator.dirty { color: var(--amber); background: rgba(186,117,23,0.12); }
+.save-indicator.dirty::before { background: var(--amber); }
+.save-indicator.saved { color: var(--green); background: rgba(29,158,117,0.1); }
+.save-indicator.saved::before { background: var(--green); }
+.save-indicator.empty { opacity: 0; }
+/* Tabs */
+.tabs { display: flex; border-bottom: 0.5px solid var(--border); margin-bottom: 24px; }
+.tab { padding: 9px 18px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text2); background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; transition: color .15s; }
+.tab.active { color: var(--text); border-bottom-color: var(--text); font-weight: 500; }
+.tab:hover:not(.active) { color: var(--text); }
+/* Sections */
+.section { margin-bottom: 20px; }
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text2); }
+/* Cards */
+.card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 12px; }
+/* Sprint config row */
+.sprint-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.sprint-info { background: var(--bg2); border-radius: var(--radius); padding: 12px 14px; }
+.sprint-info label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 5px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.sprint-info input, .sprint-info select { font-size: 13px; padding: 5px 8px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); width: 100%; font-family: inherit; outline: none; }
+.sprint-info input:focus, .sprint-info select:focus { border-color: var(--blue); }
+/* Metrics */
+.metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.metric-card { background: var(--bg2); border-radius: var(--radius); padding: 14px 16px; }
+.metric-label { font-size: 11px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.metric-value { font-size: 26px; font-weight: 500; color: var(--text); line-height: 1.1; }
+.metric-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+/* Day grid - member grids */
+.member-day-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 5px; margin-top: 10px; }
+.day-cell { border-radius: 6px; padding: 6px 4px; text-align: center; cursor: pointer; user-select: none; transition: transform .1s; border: 1.5px solid transparent; }
+.day-cell:hover { transform: scale(1.06); }
+.day-cell:active { transform: scale(0.96); }
+.day-cell.available { background: #EAF3DE; border-color: #97C459; }
+.day-cell.half { background: #FAEEDA; border-color: #EF9F27; }
+.day-cell.absent { background: #FCEBEB; border-color: #F09595; }
+.day-cell.holiday { background: var(--blue-bg); border-color: var(--blue); cursor: default; }
+.day-cell.holiday:hover { transform: none; }
+.day-cell.not-working { background: var(--bg2); border-color: transparent; opacity: 0.4; cursor: default; }
+.day-cell.not-working:hover { transform: none; }
+.day-cell.weekend { opacity: 0.3; cursor: default; background: var(--bg2); border-color: transparent; }
+.day-cell.weekend:hover { transform: none; }
+.day-num { font-size: 13px; font-weight: 500; line-height: 1; margin-bottom: 1px; }
+.day-name { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; opacity: 0.7; }
+.day-state-icon { font-size: 10px; margin-top: 2px; min-height: 12px; }
+.day-cell.available .day-num { color: #3B6D11; }
+.day-cell.half .day-num { color: #854F0B; }
+.day-cell.absent .day-num { color: #A32D2D; }
+.day-cell.holiday .day-num { color: #185FA5; }
+.day-holiday-name { font-size: 8px; color: #185FA5; margin-top: 1px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Member accordion */
+.member-accordion { border: 0.5px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 10px; overflow: hidden; }
+.member-accordion-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; background: var(--bg); transition: background .15s; user-select: none; }
+.member-accordion-header:hover { background: var(--bg2); }
+.member-accordion-body { padding: 0 16px 14px; background: var(--bg); border-top: 0.5px solid var(--border); display: none; }
+.member-accordion-body.open { display: block; }
+.accordion-chevron { margin-left: auto; font-size: 12px; color: var(--text3); transition: transform .2s; }
+.accordion-chevron.open { transform: rotate(180deg); }
+/* Legend */
+.legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
+.legend-dot { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid; }
+/* Member rows */
+.member-row { display: grid; grid-template-columns: 32px minmax(0,1fr) minmax(0,1fr) 80px 28px; gap: 8px; align-items: center; padding: 9px 0; border-bottom: 0.5px solid var(--border); }
+.member-row:last-child { border-bottom: none; }
+.member-row input, .member-row select { font-size: 13px; padding: 5px 8px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); width: 100%; font-family: inherit; outline: none; }
+.member-row input:focus, .member-row select:focus { border-color: var(--blue); }
+.col-header { display: grid; grid-template-columns: 32px minmax(0,1fr) minmax(0,1fr) 80px 28px; gap: 8px; padding: 0 0 7px; font-size: 11px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; border-bottom: 0.5px solid var(--border); margin-bottom: 2px; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+.del-btn { background: none; border: none; cursor: pointer; color: var(--text3); padding: 4px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 16px; }
+.del-btn:hover { color: var(--text); background: var(--bg2); }
+/* Member detail expand */
+.member-expand { padding: 10px 0 4px 40px; border-bottom: 0.5px solid var(--border); }
+.member-expand:last-of-type { border-bottom: none; }
+.workday-checks { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.day-check { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text2); cursor: pointer; }
+.day-check input { accent-color: var(--blue); cursor: pointer; }
+/* Capacity bar */
+.bar-wrap { background: var(--border); border-radius: 4px; height: 6px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+/* Velocity */
+.velocity-row { display: grid; grid-template-columns: 90px minmax(0,1fr) 80px 28px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+.velocity-row:last-child { border-bottom: none; }
+.velocity-row input { font-size: 13px; padding: 5px 8px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); width: 100%; font-family: inherit; outline: none; }
+.velocity-row input:focus { border-color: var(--blue); }
+/* Toggle */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+.toggle-row:last-child { border-bottom: none; }
+.toggle { width: 36px; height: 20px; background: var(--bg3); border-radius: 10px; position: relative; cursor: pointer; transition: background .2s; border: 0.5px solid var(--border); }
+.toggle.on { background: var(--green); border-color: var(--green); }
+.toggle::after { content: ''; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: #fff; top: 2px; left: 2px; transition: left .2s; }
+.toggle.on::after { left: 18px; }
+/* Empty state */
+.empty { font-size: 13px; color: var(--text3); padding: 20px 0; text-align: center; }
+/* Capacity detail */
+.cap-row { display: grid; grid-template-columns: 30px minmax(0,1fr) 70px; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+.cap-row:last-child { border-bottom: none; }
+/* Tag */
+.tag { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; background: var(--bg2); color: var(--text2); margin-left: 4px; }
+/* Report */
+#reportModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+#reportModal.open { display: flex; }
+.modal-box { background: var(--bg); border-radius: var(--radius-lg); padding: 20px; max-width: 760px; width: 96%; max-height: 92vh; overflow-y: auto; border: 0.5px solid var(--border2); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+/* Report content (for capture) */
+#reportContent { background: #fff; color: #1a1a18; padding: 32px; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+#reportContent h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+#reportContent h2 { font-size: 13px; font-weight: 500; color: #6b6a65; margin-bottom: 20px; }
+#reportContent h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #6b6a65; margin: 20px 0 10px; }
+.report-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px; }
+.report-metric { background: #f5f4f0; border-radius: 8px; padding: 12px; }
+.report-metric .lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #6b6a65; margin-bottom: 4px; }
+.report-metric .val { font-size: 22px; font-weight: 500; color: #1a1a18; }
+.report-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.report-table th { text-align: left; padding: 6px 10px; background: #f5f4f0; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #6b6a65; }
+.report-table td { padding: 7px 10px; border-bottom: 0.5px solid rgba(0,0,0,0.08); }
+.report-day-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.report-day { border-radius: 5px; padding: 5px 3px; text-align: center; font-size: 9px; font-weight: 600; }
+.report-day.available { background: #EAF3DE; color: #3B6D11; }
+.report-day.half { background: #FAEEDA; color: #854F0B; }
+.report-day.absent { background: #FCEBEB; color: #A32D2D; }
+.report-day.holiday { background: #E6F1FB; color: #185FA5; }
+.report-day.weekend { background: #f0efe8; color: #9e9d98; }
+.report-bar-bg { background: #eeede8; border-radius: 3px; height: 6px; overflow: hidden; width: 100px; display: inline-block; }
+.report-bar-fill { height: 100%; border-radius: 3px; background: #1D9E75; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+      <input class="team-name-input" id="teamName" value="Mein Scrum Team" placeholder="Teamname..." oninput="if(typeof markDirty==='function')markDirty()">
+      <span id="saveIndicator" class="save-indicator" title="Speicherstatus"></span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn" onclick="importFile()">↑ Laden</button>
+      <button class="btn" onclick="openReport()">Bericht</button>
+      <button class="btn btn-primary" onclick="exportFile()">↓ Speichern</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleImport(event)">
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('sprint',this)">Sprint</button>
+    <button class="tab" onclick="showTab('team',this)">Team</button>
+    <button class="tab" onclick="showTab('velocity',this)">Velocity</button>
+    <button class="tab" onclick="showTab('settings',this)">Einstellungen</button>
+  </div>
+
+  <!-- SPRINT TAB -->
+  <div id="tab-sprint">
+    <div class="sprint-grid">
+      <div class="sprint-info"><label>Sprint Nr.</label><input type="number" id="sprintNr" value="1" min="1" onchange="recalc()"></div>
+      <div class="sprint-info"><label>Start</label><input type="date" id="sprintStart" onchange="recalc()"></div>
+      <div class="sprint-info"><label>Ende</label><input type="date" id="sprintEnd" onchange="recalc()"></div>
+      <div class="sprint-info"><label>Einheit</label><select id="unit" onchange="recalc()"><option value="days">Tage</option><option value="hours">Stunden</option></select></div>
+      <div class="sprint-info" title="Globaler Default. Kann pro Person im Team-Tab überschrieben werden."><label>Meetings (h/Sprint)</label><input type="number" id="meetingHours" value="12" min="0" step="0.5" onchange="recalc();renderMembers()"></div>
+    </div>
+
+    <!-- Story Points (moved up) -->
+    <div class="section">
+      <div class="section-header"><span class="section-label">Story Points</span></div>
+      <div class="card">
+        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end">
+          <div><div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Geplant</div>
+            <input type="number" id="committedSP" value="0" min="0" onchange="recalc()" style="font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);width:120px;font-family:inherit;outline:none"></div>
+          <div><div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Abgeschlossen</div>
+            <input type="number" id="completedSP" value="0" min="0" onchange="recalc()" style="font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);width:120px;font-family:inherit;outline:none"></div>
+          <div id="spGoalStatus" style="font-size:13px;color:var(--text2);flex:1;min-width:200px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sprint Goals -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-label">Sprint-Ziele</span>
+        <button class="btn" onclick="addSprintGoal()">+ Ziel</button>
+      </div>
+      <div class="card" id="sprintGoalsList"></div>
+    </div>
+
+    <div class="metrics-grid" id="metricsArea"></div>
+
+    <!-- Per-member Day Grids -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-label">Abwesenheiten pro Mitglied</span>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#EAF3DE;border:1.5px solid #97C459"></span>Verfügbar</span>
+            <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#FAEEDA;border:1.5px solid #EF9F27"></span>Halbtags</span>
+            <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#FCEBEB;border:1.5px solid #F09595"></span>Abwesend</span>
+            <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#E6F1FB;border:1.5px solid #378ADD"></span>Feiertag</span>
+          </div>
+        </div>
+      </div>
+      <div id="memberAbsenceList"></div>
+    </div>
+
+    <!-- Capacity -->
+    <div class="section">
+      <div class="section-header"><span class="section-label">Team-Kapazität</span></div>
+      <div class="card" id="capacityDetail"></div>
+    </div>
+  </div>
+
+  <!-- TEAM TAB -->
+  <div id="tab-team" style="display:none">
+    <div class="section">
+      <div class="section-header"><span class="section-label">Rollen</span><button class="btn" onclick="addRole()">+ Rolle</button></div>
+      <div class="card" id="roleList"></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-label">Teammitglieder</span><button class="btn" onclick="addMember()">+ Mitglied</button></div>
+      <div class="card">
+        <div style="font-size:12px;color:var(--text2);background:var(--bg2);padding:10px 12px;border-radius:var(--radius);margin-bottom:10px;line-height:1.5">
+          <strong style="color:var(--text)">Fokus %</strong> = welcher Anteil der reinen Arbeitszeit realistisch für Sprint-Arbeit zur Verfügung steht (also nach Abzug von Meetings, Refinements, Support, Slack, etc.). Typisch 60–80% bei Devs, 40–60% bei Scrum Mastern.
+        </div>
+        <div class="col-header"><span></span><span>Name</span><span>Rolle</span><span title="Anteil der Arbeitszeit für Sprint-Arbeit (siehe Erklärung oben)">Fokus % ⓘ</span><span></span></div>
+        <div id="memberList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VELOCITY TAB -->
+  <div id="tab-velocity" style="display:none">
+    <div class="metrics-grid" id="velocityMetrics"></div>
+    <div class="section">
+      <div class="section-header"><span class="section-label">Sprint-Historie</span><button class="btn" onclick="addVelocityEntry()">+ Sprint</button></div>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:90px minmax(0,1fr) 80px 28px;gap:8px;padding:0 0 7px;font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.06em;border-bottom:0.5px solid var(--border);margin-bottom:2px">
+          <span>Sprint</span><span>Notiz</span><span>Story Pts</span><span></span></div>
+        <div id="velocityList"></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="section-label">Verlauf</span></div>
+      <div class="card" id="velocityChart" style="min-height:160px"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div id="tab-settings" style="display:none">
+    <div class="section">
+      <div class="section-label" style="margin-bottom:10px">Optionale KPIs</div>
+      <div class="card">
+        <div class="toggle-row"><label>Sprint-Ziele Erreichung</label><button class="toggle on" id="kpi-goal" onclick="toggleKpi('goal',this)"></button></div>
+        <div class="toggle-row"><label>Commitment Rate</label><button class="toggle" id="kpi-commit" onclick="toggleKpi('commit',this)"></button></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label" style="margin-bottom:10px">Daten</div>
+      <div class="card">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Alle Daten werden in einer JSON-Datei auf deinem Laptop gespeichert. Kein Server, kein Cloud-Zwang.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="importFile()">↑ Datei laden</button>
+          <button class="btn btn-primary" onclick="exportFile()">↓ Speichern als JSON</button>
+          <button class="btn btn-danger" onclick="if(confirm('Alle Daten zurücksetzen?'))resetData()">↺ Zurücksetzen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div id="reportModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span style="font-size:16px;font-weight:500">Sprint-Bericht</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="exportPNG()">PNG → Zwischenablage</button>
+        <button class="btn btn-primary" onclick="exportPDF()">PDF herunterladen</button>
+        <button class="btn" onclick="closeReport()">✕</button>
+      </div>
+    </div>
+    <div id="reportContent"></div>
+  </div>
+</div>
+
+<script>
+// ─── Austrian Holidays ────────────────────────────────────────────────────────
+function getAustrianHolidays(year) {
+  // Easter calculation (Gauss algorithm)
+  function easter(y) {
+    const a=y%19,b=Math.floor(y/100),c=y%100;
+    const d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25);
+    const g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30;
+    const i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7;
+    const m=Math.floor((a+11*h+22*l)/451);
+    const month=Math.floor((h+l-7*m+114)/31);
+    const day=((h+l-7*m+114)%31)+1;
+    return new Date(y,month-1,day);
+  }
+  const e=easter(year);
+  const add=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+  const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const h={};
+  const fixed=[
+    ['01-01','Neujahr'],['01-06','Heilige Drei Könige'],
+    ['05-01','Staatsfeiertag'],['08-15','Mariä Himmelfahrt'],
+    ['10-26','Nationalfeiertag'],['11-01','Allerheiligen'],
+    ['12-08','Mariä Empfängnis'],['12-25','Christtag'],['12-26','Stefanitag']
+  ];
+  fixed.forEach(([d,n])=>h[`${year}-${d}`]=n);
+  h[fmt(add(e,-2))]='Karfreitag';
+  h[fmt(e)]='Ostersonntag';
+  h[fmt(add(e,1))]='Ostermontag';
+  h[fmt(add(e,39))]='Christi Himmelfahrt';
+  h[fmt(add(e,49))]='Pfingstsonntag';
+  h[fmt(add(e,50))]='Pfingstmontag';
+  h[fmt(add(e,60))]='Fronleichnam';
+  return h;
+}
+// Pre-compute 2024–2034
+const HOLIDAYS={};
+for(let y=2024;y<=2034;y++) Object.assign(HOLIDAYS,getAustrianHolidays(y));
+
+// ─── State ────────────────────────────────────────────────────────────────────
+const COLORS=['#9FE1CB','#B5D4F4','#F4C0D1','#FAC775','#CED0F6','#C0DD97','#F5C4B3'];
+const DAYS_DE=['So','Mo','Di','Mi','Do','Fr','Sa'];
+const DAYS_LONG=['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+
+let state={
+  teamName:'Mein Scrum Team',
+  sprint:{nr:1,start:'',end:'',unit:'days',committedSP:0,completedSP:0,meetingHours:12,goals:[]},
+  members:[
+    {id:1,name:'Anna Müller',role:'Developer',focus:70,workDays:[1,2,3,4,5],weeklyHours:38,dayStates:{},meetingHours:null},
+    {id:2,name:'Ben Kowalski',role:'Developer',focus:70,workDays:[1,2,3,4,5],weeklyHours:38,dayStates:{},meetingHours:null},
+    {id:3,name:'Carla Nowak',role:'QA',focus:80,workDays:[1,2,3,4,5],weeklyHours:30,dayStates:{},meetingHours:null},
+  ],
+  roles:['Scrum Master','Product Owner','Developer','QA','Designer','DevOps'],
+  velocity:[
+    {sprint:'S-1',note:'',sp:32},{sprint:'S-2',note:'',sp:28},{sprint:'S-3',note:'',sp:35}
+  ],
+  kpis:{goal:true,focus:false,commit:false}
+};
+let nextId=10;
+let nextGoalId=1;
+
+// ─── Date utils ──────────────────────────────────────────────────────────────
+function fmtDate(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function parseDate(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function isWeekend(d){const wd=d.getDay();return wd===0||wd===6;}
+function isHoliday(s){return!!HOLIDAYS[s];}
+function isWorkday(d){return !isWeekend(d)&&!isHoliday(fmtDate(d));}
+
+function getSprintDays(){
+  const s=document.getElementById('sprintStart').value;
+  const e=document.getElementById('sprintEnd').value;
+  if(!s||!e)return[];
+  const days=[];let cur=parseDate(s),end=parseDate(e);
+  while(cur<=end){days.push(new Date(cur));cur.setDate(cur.getDate()+1);}
+  return days;
+}
+function getSprintWorkdays(){return getSprintDays().filter(isWorkday);}
+
+// effective work contribution of a day for a member (0, 0.5, or daily-rate in hours/days)
+function memberDailyRate(m){
+  // hours per workday = weeklyHours / number of work days per week
+  const daysPerWeek=m.workDays.length||5;
+  return m.weeklyHours/daysPerWeek;
+}
+
+function memberMeetingHours(m){
+  // null/undefined = use global default; explicit 0 keeps 0
+  if(m.meetingHours===null||m.meetingHours===undefined||m.meetingHours==='')return Number(state.sprint.meetingHours)||0;
+  return Number(m.meetingHours)||0;
+}
+function memberSprintCapacity(m){
+  const days=getSprintDays();
+  if(!m.dayStates)m.dayStates={};
+  let totalHours=0;
+  days.forEach(d=>{
+    const dow=d.getDay();
+    if(!m.workDays.includes(dow))return;
+    if(isHoliday(fmtDate(d)))return;
+    const ds=m.dayStates[fmtDate(d)]||'available';
+    const rate=memberDailyRate(m)*(m.focus/100);
+    if(ds==='available')totalHours+=rate;
+    else if(ds==='half')totalHours+=rate*0.5;
+    // absent = 0
+  });
+  // subtract meeting hours (proportional to actual availability: if person is 50% absent, meetings also scale)
+  const max=memberTheoreticalMaxHours(m);
+  const availFactor=max>0?(totalHours/(max*(m.focus/100)))||0:0;
+  const meetingDeduction=memberMeetingHours(m)*availFactor;
+  totalHours=Math.max(0,totalHours-meetingDeduction);
+  if(state.sprint.unit==='days'){
+    const dailyH=memberDailyRate(m);
+    return dailyH>0?totalHours/dailyH:0;
+  }
+  return totalHours;
+}
+
+function teamTotalCapacity(){return state.members.reduce((s,m)=>s+memberSprintCapacity(m),0);}
+
+// Compact absence dates into ranges. Returns "Abwesend: Mo–Mi 18.–20.05., ½ Fr 22.05." or "Keine Abwesenheiten"
+function formatAbsenceList(m){
+  if(!m.dayStates)return'<em style="opacity:0.6">Keine Abwesenheiten</em>';
+  const days=getSprintDays();
+  const absDates=[],halfDates=[];
+  days.forEach(d=>{
+    const k=fmtDate(d);
+    if(m.dayStates[k]==='absent')absDates.push(new Date(d));
+    else if(m.dayStates[k]==='half')halfDates.push(new Date(d));
+  });
+  if(!absDates.length&&!halfDates.length)return'<em style="opacity:0.6">Keine Abwesenheiten</em>';
+  // group into ranges (only consecutive WORK days for this member, ignoring weekends/holidays/non-workdays)
+  const groupContiguous=(dates)=>{
+    if(!dates.length)return[];
+    const groups=[[dates[0]]];
+    for(let i=1;i<dates.length;i++){
+      const prev=dates[i-1],cur=dates[i];
+      // walk from prev+1 to cur. If every day in between is non-working for m (weekend/holiday/not in workDays), still consider contiguous
+      let contiguous=true;
+      const probe=new Date(prev);probe.setDate(probe.getDate()+1);
+      while(probe<cur){
+        const dow=probe.getDay();
+        const isWork=m.workDays.includes(dow)&&!isWeekend(probe)&&!isHoliday(fmtDate(probe));
+        if(isWork){contiguous=false;break;}
+        probe.setDate(probe.getDate()+1);
+      }
+      if(contiguous)groups[groups.length-1].push(cur);
+      else groups.push([cur]);
+    }
+    return groups;
+  };
+  const fmtRange=(group)=>{
+    const dayNames=['So','Mo','Di','Mi','Do','Fr','Sa'];
+    const pad=n=>String(n).padStart(2,'0');
+    if(group.length===1){
+      const d=group[0];return`${dayNames[d.getDay()]} ${pad(d.getDate())}.${pad(d.getMonth()+1)}.`;
+    }
+    const s=group[0],e=group[group.length-1];
+    return`${dayNames[s.getDay()]}–${dayNames[e.getDay()]} ${pad(s.getDate())}.–${pad(e.getDate())}.${pad(e.getMonth()+1)}.`;
+  };
+  const absGroups=groupContiguous(absDates);
+  const halfGroups=groupContiguous(halfDates);
+  const parts=[];
+  if(absGroups.length)parts.push('Abwesend: '+absGroups.map(fmtRange).join(', '));
+  if(halfGroups.length)parts.push('½: '+halfGroups.map(fmtRange).join(', '));
+  return parts.join(' · ');
+}
+
+// ─── Per-member Absence Grids ─────────────────────────────────────────────────
+function renderMemberAbsences(){
+  const el=document.getElementById('memberAbsenceList');
+  if(!el)return;
+  const days=getSprintDays();
+  if(!state.members.length){el.innerHTML='<div style="font-size:13px;color:var(--text3);padding:16px 0;text-align:center">Noch keine Teammitglieder – im Tab "Team" hinzufügen.</div>';return;}
+  if(!days.length){el.innerHTML='<div style="font-size:13px;color:var(--text3);padding:16px 0;text-align:center">Start und Ende des Sprints wählen.</div>';return;}
+  el.innerHTML='';
+  state.members.forEach((m,mi)=>{
+    if(!m.dayStates)m.dayStates={};
+    // init workdays
+    days.forEach(d=>{
+      const k=fmtDate(d);
+      const dow=d.getDay();
+      if(m.workDays.includes(dow)&&!isHoliday(k)&&!isWeekend(d)&&!(k in m.dayStates))m.dayStates[k]='available';
+    });
+    const absText=formatAbsenceList(m);
+    const absSummary=`<span id="abs-summary-${m.id}" style="font-size:12px;color:var(--text3);margin-left:6px;font-weight:400">${absText}</span>`;    const col=COLORS[mi%COLORS.length];
+    const initials=m.name.split(' ').map(x=>x[0]).join('').slice(0,2);
+    const accordionId=`acc-${m.id}`;
+    const bodyId=`acc-body-${m.id}`;
+    const chevronId=`chev-${m.id}`;
+    const acc=document.createElement('div');
+    acc.className='member-accordion';
+    acc.innerHTML=`
+      <div class="member-accordion-header" onclick="toggleAccordion('${bodyId}','${chevronId}')">
+        <div class="avatar" style="background:${col};color:#333;flex-shrink:0">${initials}</div>
+        <div style="font-weight:500;font-size:14px">${m.name}</div>
+        <span class="tag" style="flex-shrink:0">${m.role}</span>
+        ${absSummary}
+        <span class="accordion-chevron" id="${chevronId}">▼</span>
+      </div>
+      <div class="member-accordion-body" id="${bodyId}">
+        <div class="member-day-grid" id="grid-${m.id}" style="margin-top:12px"></div>
+      </div>`;
+    el.appendChild(acc);
+    renderOneMemberGrid(m,mi);
+  });
+}
+
+function renderOneMemberGrid(m,mi){
+  const gridEl=document.getElementById(`grid-${m.id}`);
+  if(!gridEl)return;
+  const days=getSprintDays();
+  gridEl.innerHTML='';
+  days.forEach(d=>{
+    const k=fmtDate(d);
+    const dow=d.getDay();
+    const weekend=isWeekend(d);
+    const holiday=isHoliday(k);
+    const notWorking=!m.workDays.includes(dow)&&!weekend;
+    const div=document.createElement('div');
+    div.className='day-cell';
+    if(weekend)div.classList.add('weekend');
+    else if(holiday)div.classList.add('holiday');
+    else if(notWorking)div.classList.add('not-working');
+    else div.classList.add(m.dayStates[k]||'available');
+    const ds=m.dayStates[k]||'available';
+    const icon=weekend||notWorking?'':holiday?'🏛':ds==='half'?'½':ds==='absent'?'✕':'✓';
+    div.innerHTML=`<div class="day-num">${d.getDate()}</div><div class="day-name">${DAYS_DE[d.getDay()]}</div><div class="day-state-icon">${icon}</div>${holiday?`<div class="day-holiday-name">${HOLIDAYS[k].split(' ')[0]}</div>`:''}`;
+    if(!weekend&&!holiday&&!notWorking){
+      div.onclick=(e)=>{
+        e.stopPropagation();
+        if(!m.dayStates)m.dayStates={};
+        const cur=m.dayStates[k]||'available';
+        m.dayStates[k]=cur==='available'?'half':cur==='half'?'absent':'available';
+        renderOneMemberGrid(m,mi);
+        renderMemberAbsencesSummary(m);
+        recalc();
+      };
+    }
+    gridEl.appendChild(div);
+  });
+}
+
+function renderMemberAbsencesSummary(m){
+  const el=document.getElementById(`abs-summary-${m.id}`);
+  if(el)el.innerHTML=formatAbsenceList(m);
+}
+
+function toggleAccordion(bodyId,chevronId){
+  const body=document.getElementById(bodyId);
+  const chev=document.getElementById(chevronId);
+  if(!body)return;
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  if(chev)chev.classList.toggle('open',!isOpen);
+  if(!isOpen){
+    // find member and re-render grid
+    const memberId=bodyId.replace('acc-body-','');
+    const m=state.members.find(x=>String(x.id)===String(memberId));
+    if(m){const mi=state.members.indexOf(m);renderOneMemberGrid(m,mi);}
+  }
+}
+
+// ─── Metrics ──────────────────────────────────────────────────────────────────
+function recalc(){
+  state.sprint.nr=Number(document.getElementById('sprintNr').value)||1;
+  state.sprint.start=document.getElementById('sprintStart').value;
+  state.sprint.end=document.getElementById('sprintEnd').value;
+  state.sprint.unit=document.getElementById('unit').value;
+  state.sprint.meetingHours=Number(document.getElementById('meetingHours').value)||0;
+  state.sprint.committedSP=Number(document.getElementById('committedSP').value)||0;
+  state.sprint.completedSP=Number(document.getElementById('completedSP').value)||0;
+  renderMetrics();renderCapacityDetail();renderSpGoalStatus();renderVelocityMetrics();
+  if(typeof markDirty==='function')markDirty();
+}
+function avgVelocity(n){
+  const v=state.velocity.slice(-n).map(x=>Number(x.sp)||0);
+  return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):0;
+}
+function renderMetrics(){
+  const cap=teamTotalCapacity();
+  const avg3=avgVelocity(3);
+  const unit=state.sprint.unit==='hours'?'h':'d';
+  const wd=getSprintWorkdays().length;
+  const holidays=getSprintDays().filter(d=>isHoliday(fmtDate(d))).length;
+  let html=`
+    <div class="metric-card"><div class="metric-label">Arbeitstage</div><div class="metric-value">${wd}</div><div class="metric-sub">${holidays} Feiertag${holidays!==1?'e':''}</div></div>
+    <div class="metric-card"><div class="metric-label">Team-Kapazität</div><div class="metric-value">${Math.round(cap*10)/10} ${unit}</div><div class="metric-sub">nach Fokus & Meetings</div></div>
+    <div class="metric-card"><div class="metric-label">Ø Velocity (3)</div><div class="metric-value">${avg3} SP</div><div class="metric-sub">gleitend</div></div>`;
+  // Sprint Goal Erreichung (Checkboxen)
+  if(state.kpis.goal&&state.sprint.goals&&state.sprint.goals.length){
+    const done=state.sprint.goals.filter(g=>g.done).length;
+    const total=state.sprint.goals.length;
+    const pct=total>0?Math.round((done/total)*100):0;
+    html+=`<div class="metric-card"><div class="metric-label">Sprint-Ziele</div><div class="metric-value">${pct}%</div><div class="metric-sub">${done} von ${total} erreicht</div></div>`;
+  }
+  if(state.kpis.commit&&state.sprint.committedSP>0&&avg3>0){
+    const cr=Math.round((state.sprint.committedSP/avg3)*100);
+    html+=`<div class="metric-card"><div class="metric-label">Commitment Rate</div><div class="metric-value">${cr}%</div><div class="metric-sub">vs. Ø Velocity</div></div>`;
+  }
+  document.getElementById('metricsArea').innerHTML=html;
+}
+function memberTheoreticalMaxHours(m){
+  // theoretical max in HOURS, ignoring focus and absences (pure workday count × daily rate)
+  const days=getSprintDays();
+  let total=0;
+  days.forEach(d=>{
+    const dow=d.getDay();
+    if(!m.workDays.includes(dow))return;
+    if(isHoliday(fmtDate(d)))return;
+    total+=memberDailyRate(m);
+  });
+  return total;
+}
+function memberTheoreticalMax(m){
+  // capacity if there were no absences and focus was 100% — but DOES subtract meeting hours
+  // (so the "Auslastung %" bar shows how much of "best case after meetings" you're hitting)
+  const days=getSprintDays();
+  let total=0;
+  days.forEach(d=>{
+    const dow=d.getDay();
+    if(!m.workDays.includes(dow))return;
+    if(isHoliday(fmtDate(d)))return;
+    total+=memberDailyRate(m);
+  });
+  // subtract full meeting load (no proration since this is the max case with no absences)
+  total=Math.max(0,total-memberMeetingHours(m));
+  if(state.sprint.unit==='days'){
+    const dailyH=memberDailyRate(m);
+    return dailyH>0?total/dailyH:0;
+  }
+  return total;
+}
+function renderCapacityDetail(){
+  const el=document.getElementById('capacityDetail');
+  if(!state.members.length){el.innerHTML='<div class="empty">Noch keine Teammitglieder.</div>';return;}
+  const total=teamTotalCapacity();
+  const unit=state.sprint.unit==='hours'?'h':'d';
+  let html='';
+  state.members.forEach((m,i)=>{
+    const cap=memberSprintCapacity(m);
+    const max=memberTheoreticalMax(m);
+    const utilPct=max>0?Math.round((cap/max)*100):0;
+    const sharePct=total>0?Math.round((cap/total)*100):0;
+    const col=COLORS[i%COLORS.length];
+    const barColor=utilPct>=70?'#1D9E75':utilPct>=40?'#BA7517':'#E24B4A';
+    html+=`<div class="cap-row">
+      <div class="avatar" style="background:${col};color:#333">${m.name.split(' ').map(x=>x[0]).join('').slice(0,2)}</div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:4px">${m.name}<span class="tag">${m.role}</span></div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${utilPct}%;background:${barColor}"></div></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">${utilPct}% verfügbar · ${sharePct}% Teamanteil · ${m.workDays.length}d/Woche · Fokus ${m.focus}% · ${memberMeetingHours(m)}h Meetings</div>
+      </div>
+      <div style="font-size:13px;font-weight:500;text-align:right;white-space:nowrap">${Math.round(cap*10)/10} ${unit}</div>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+function renderSpGoalStatus(){
+  const el=document.getElementById('spGoalStatus');
+  if(!state.sprint.committedSP){el.textContent='';return;}
+  const rate=Math.round((state.sprint.completedSP/state.sprint.committedSP)*100);
+  const color=rate>=80?'#1D9E75':rate>=60?'#BA7517':'#E24B4A';
+  el.innerHTML=`<span style="color:${color};font-weight:500">${rate}% erreicht</span> · ${state.sprint.completedSP} von ${state.sprint.committedSP} SP abgeschlossen`;
+}
+
+// ─── Team Tab ─────────────────────────────────────────────────────────────────
+function renderMembers(){
+  const el=document.getElementById('memberList');
+  if(!state.members.length){el.innerHTML='<div class="empty">Noch keine Mitglieder.</div>';return;}
+  const roleOpts=state.roles.map(r=>`<option value="${r}">${r}</option>`).join('');
+  const dayNames=['So','Mo','Di','Mi','Do','Fr','Sa'];
+  let html='';
+  state.members.forEach((m,i)=>{
+    const col=COLORS[i%COLORS.length];
+    html+=`<div class="member-row">
+      <div class="avatar" style="background:${col};color:#333">${m.name.split(' ').map(x=>x[0]).join('').slice(0,2)}</div>
+      <input value="${m.name}" onchange="state.members[${i}].name=this.value;recalc()" onblur="renderCapacityDetail()">
+      <select onchange="state.members[${i}].role=this.value;recalc()">${roleOpts.replace(`value="${m.role}"`,`value="${m.role}" selected`)}</select>
+      <input type="number" value="${m.focus}" min="0" max="100" placeholder="Fokus %" onchange="state.members[${i}].focus=Number(this.value);recalc()">
+      <button class="del-btn" tabindex="-1" onclick="state.members.splice(${i},1);renderMembers();recalc()" aria-label="Löschen">✕</button>
+    </div>
+    <div class="member-expand">
+      <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Arbeitstage & Wochenstunden</div>
+      <div class="workday-checks">
+        ${[1,2,3,4,5,6,0].map(dn=>`<label class="day-check"><input type="checkbox" tabindex="-1" ${m.workDays.includes(dn)?'checked':''} onchange="toggleWorkday(${i},${dn},this.checked)"> ${dayNames[dn]}</label>`).join('')}
+        <span style="margin-left:8px;font-size:12px;color:var(--text2)">Std/Woche:</span>
+        <input type="number" value="${m.weeklyHours}" min="1" max="60" style="width:60px;font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit;outline:none" onchange="state.members[${i}].weeklyHours=Number(this.value);recalc()">
+        <span style="margin-left:12px;font-size:12px;color:var(--text2)" title="Eigene Meeting-Last für diese Person. Leer = globaler Default aus dem Sprint-Tab.">Meetings h/Sprint:</span>
+        <input type="number" value="${m.meetingHours===null||m.meetingHours===undefined?'':m.meetingHours}" min="0" step="0.5" placeholder="(${Number(state.sprint.meetingHours)||0})" style="width:64px;font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit;outline:none" onchange="state.members[${i}].meetingHours=this.value===''?null:Number(this.value);recalc();renderMembers()">
+      </div>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+function toggleWorkday(memberIdx,day,checked){
+  const m=state.members[memberIdx];
+  if(checked){if(!m.workDays.includes(day))m.workDays.push(day);m.workDays.sort();}
+  else m.workDays=m.workDays.filter(d=>d!==day);
+  recalc();
+}
+function addMember(){
+  state.members.push({id:nextId++,name:'Neues Mitglied',role:state.roles[2]||'Developer',focus:100,workDays:[1,2,3,4,5],weeklyHours:38,dayStates:{},meetingHours:null});
+  renderMembers();recalc();
+}
+function renderRoles(){
+  const el=document.getElementById('roleList');
+  let html='';
+  state.roles.forEach((r,i)=>{
+    html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--border)">
+      <input style="flex:1;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit;outline:none" value="${r}" onchange="state.roles[${i}]=this.value;renderMembers()">
+      <button class="del-btn" onclick="state.roles.splice(${i},1);renderRoles();renderMembers()">✕</button>
+    </div>`;
+  });
+  el.innerHTML=html||'<div class="empty">Keine Rollen definiert.</div>';
+}
+function addRole(){state.roles.push('Neue Rolle');renderRoles();}
+
+// ─── Velocity Tab ─────────────────────────────────────────────────────────────
+function sortVelocityIfNumeric(){
+  // Try to extract trailing/leading number from each sprint label
+  const withNums=state.velocity.map(v=>{
+    const m=String(v.sprint).match(/(-?\d+(?:[.,]\d+)?)/);
+    return{v,n:m?parseFloat(m[1].replace(',','.')):null};
+  });
+  if(withNums.every(x=>x.n!==null)){
+    withNums.sort((a,b)=>a.n-b.n);
+    state.velocity=withNums.map(x=>x.v);
+  }
+}
+function onVelocityChange(){
+  sortVelocityIfNumeric();
+  renderVelocityList();renderVelocityMetrics();renderVelocityChart();
+  if(typeof markDirty==='function')markDirty();
+}
+function renderVelocityList(){
+  const el=document.getElementById('velocityList');
+  if(!state.velocity.length){el.innerHTML='<div class="empty">Noch keine Sprint-Daten.</div>';return;}
+  let html='';
+  state.velocity.forEach((v,i)=>{
+    html+=`<div class="velocity-row">
+      <input value="${v.sprint}" onchange="state.velocity[${i}].sprint=this.value;onVelocityChange()">
+      <input value="${v.note||''}" placeholder="Notiz..." onchange="state.velocity[${i}].note=this.value;if(typeof markDirty==='function')markDirty()">
+      <input type="number" value="${v.sp}" min="0" onchange="state.velocity[${i}].sp=Number(this.value);onVelocityChange()">
+      <button class="del-btn" onclick="state.velocity.splice(${i},1);onVelocityChange()">✕</button>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+function addVelocityEntry(){
+  state.velocity.push({sprint:`S-${state.velocity.length+1}`,note:'',sp:0});
+  onVelocityChange();
+}
+function renderVelocityMetrics(){
+  const avg3=avgVelocity(3),avg5=avgVelocity(5);
+  const all=state.velocity.map(v=>Number(v.sp)||0);
+  const mx=all.length?Math.max(...all):0;
+  const trend=all.length>=2?all[all.length-1]-all[all.length-2]:0;
+  const tc=trend>0?'#1D9E75':trend<0?'#E24B4A':'var(--text2)';
+  document.getElementById('velocityMetrics').innerHTML=`
+    <div class="metric-card"><div class="metric-label">Ø 3 Sprints</div><div class="metric-value">${avg3} SP</div></div>
+    <div class="metric-card"><div class="metric-label">Ø 5 Sprints</div><div class="metric-value">${avg5} SP</div></div>
+    <div class="metric-card"><div class="metric-label">Höchstwert</div><div class="metric-value">${mx} SP</div></div>
+    <div class="metric-card"><div class="metric-label">Trend</div><div class="metric-value" style="color:${tc}">${trend>0?'+':''}${trend} SP</div><div class="metric-sub">letzter Sprint</div></div>`;
+}
+function renderVelocityChart(){
+  const el=document.getElementById('velocityChart');
+  if(!state.velocity.length){el.innerHTML='<div class="empty">Keine Daten.</div>';return;}
+  const vals=state.velocity.map(v=>Number(v.sp)||0);
+  const labels=state.velocity.map(v=>v.sprint);
+  const mx=Math.max(...vals,1);
+  const avg=avgVelocity(3);
+  const H=160,W=580,pad=36,barW=Math.min(44,Math.floor((W-pad*2)/vals.length*0.65));
+  const gap=(W-pad*2-barW*vals.length)/(vals.length+1);
+  let bars='';
+  vals.forEach((v,i)=>{
+    const x=pad+gap*(i+1)+barW*i;
+    const h=Math.max(4,Math.round((v/mx)*(H-50)));
+    const y=H-28-h;
+    bars+=`<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="3" fill="#B5D4F4"/>
+    <text x="${x+barW/2}" y="${y-4}" text-anchor="middle" font-size="11" fill="#6b6a65">${v}</text>
+    <text x="${x+barW/2}" y="${H-8}" text-anchor="middle" font-size="10" fill="#9e9d98">${labels[i]}</text>`;
+  });
+  const avgY=H-28-Math.round((avg/mx)*(H-50));
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+    ${bars}
+    <line x1="${pad}" y1="${avgY}" x2="${W-pad}" y2="${avgY}" stroke="#E24B4A" stroke-width="1" stroke-dasharray="4,3" opacity="0.7"/>
+    <text x="${W-pad-2}" y="${avgY-4}" text-anchor="end" font-size="10" fill="#E24B4A">Ø3</text>
+  </svg>`;
+}
+
+// ─── Sprint Goals ─────────────────────────────────────────────────────────────
+function renderSprintGoals(){
+  const el=document.getElementById('sprintGoalsList');
+  if(!el)return;
+  if(!state.sprint.goals||!state.sprint.goals.length){
+    el.innerHTML='<div style="font-size:13px;color:var(--text3);padding:8px 0">Noch keine Sprint-Ziele definiert. <a onclick="addSprintGoal()" style="color:var(--blue);cursor:pointer;text-decoration:underline">Erstes Ziel hinzufügen</a></div>';
+    return;
+  }
+  let html='';
+  state.sprint.goals.forEach((g,i)=>{
+    html+=`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid var(--border)">
+      <input type="checkbox" id="goal-${g.id}" ${g.done?'checked':''} onchange="toggleSprintGoal(${i},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--green);flex-shrink:0">
+      <input value="${g.text.replace(/"/g,'&quot;')}" placeholder="Ziel..." onchange="state.sprint.goals[${i}].text=this.value;if(typeof markDirty==='function')markDirty()" style="flex:1;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit;outline:none${g.done?';text-decoration:line-through;opacity:0.6':''}">
+      <button class="del-btn" tabindex="-1" onclick="state.sprint.goals.splice(${i},1);renderSprintGoals();renderMetrics();if(typeof markDirty==='function')markDirty()" aria-label="Löschen">✕</button>
+    </div>`;
+  });
+  // summary
+  const done=state.sprint.goals.filter(g=>g.done).length;
+  const total=state.sprint.goals.length;
+  const pct=total>0?Math.round((done/total)*100):0;
+  const color=pct>=80?'#1D9E75':pct>=50?'#BA7517':'#E24B4A';
+  html+=`<div style="margin-top:10px;font-size:13px"><span style="color:${color};font-weight:500">${done}/${total} erreicht</span> <span style="color:var(--text3)">(${pct}%)</span></div>`;
+  el.innerHTML=html;
+}
+function addSprintGoal(){
+  if(!state.sprint.goals)state.sprint.goals=[];
+  state.sprint.goals.push({id:nextGoalId++,text:'',done:false});
+  renderSprintGoals();
+  renderMetrics();
+  if(typeof markDirty==='function')markDirty();
+  // focus the new input
+  setTimeout(()=>{
+    const inputs=document.querySelectorAll('#sprintGoalsList input[type="text"], #sprintGoalsList input:not([type])');
+    if(inputs.length)inputs[inputs.length-1].focus();
+  },10);
+}
+function toggleSprintGoal(idx,done){
+  state.sprint.goals[idx].done=done;
+  renderSprintGoals();
+  renderMetrics();
+  if(typeof markDirty==='function')markDirty();
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+function toggleKpi(key,btn){
+  state.kpis[key]=!state.kpis[key];
+  btn.classList.toggle('on',state.kpis[key]);
+  renderMetrics();
+  if(typeof markDirty==='function')markDirty();
+}
+
+// ─── Report ───────────────────────────────────────────────────────────────────
+function buildReportHTML(){
+  const cap=teamTotalCapacity();
+  const unit=state.sprint.unit==='hours'?'h':'d';
+  const wd=getSprintWorkdays().length;
+  const avg3=avgVelocity(3);
+  const avg5=avgVelocity(5);
+  const committed=state.sprint.committedSP;
+  const completed=state.sprint.completedSP;
+  const spRate=committed>0?Math.round((completed/committed)*100):null;
+  const goals=state.sprint.goals||[];
+  const goalsDone=goals.filter(g=>g.done&&g.text).length;
+  const goalsTotal=goals.filter(g=>g.text).length;
+  const goalRate=goalsTotal>0?Math.round((goalsDone/goalsTotal)*100):null;
+  const days=getSprintDays();
+
+  // Velocity trend
+  const allVel=state.velocity.map(v=>Number(v.sp)||0);
+  const trend=allVel.length>=2?allVel[allVel.length-1]-allVel[allVel.length-2]:0;
+  const trendStr=trend>0?`+${trend}`:String(trend);
+  const trendColor=trend>0?'#1D9E75':trend<0?'#E24B4A':'#9e9d98';
+
+  // Absences per member compacted
+  const absenceLines=[];
+  state.members.forEach(m=>{
+    if(!m.dayStates)return;
+    const txt=formatAbsenceList(m);
+    if(txt.includes('Keine Abwesenheiten'))return;
+    absenceLines.push({name:m.name,txt});
+  });
+
+  // Team calendar — aggregate view
+  let dayCells='';
+  days.forEach(d=>{
+    const k=fmtDate(d);
+    const weekend=isWeekend(d);
+    const holiday=isHoliday(k);
+    let cls='report-day weekend';
+    if(!weekend&&!holiday){
+      const anyAbsent=state.members.some(m=>m.dayStates&&m.dayStates[k]==='absent');
+      const anyHalf=state.members.some(m=>m.dayStates&&m.dayStates[k]==='half');
+      cls='report-day '+(anyAbsent?'absent':anyHalf?'half':'available');
+    }
+    if(holiday)cls='report-day holiday';
+    dayCells+=`<div class="${cls}" style="padding:3px 2px;font-size:9px;border-radius:4px">${d.getDate()}<br><span style="font-size:7px;opacity:0.7">${DAYS_DE[d.getDay()]}</span></div>`;
+  });
+
+  // Member rows
+  let memberRows='';
+  state.members.forEach(m=>{
+    const c=memberSprintCapacity(m);
+    const max=memberTheoreticalMax(m);
+    const utilPct=max>0?Math.round((c/max)*100):0;
+    const barColor=utilPct>=70?'#1D9E75':utilPct>=40?'#BA7517':'#E24B4A';
+    memberRows+=`<tr>
+      <td style="font-weight:500;font-size:10px;padding:3px 5px">${m.name}</td>
+      <td style="font-size:10px;color:#6b6a65;padding:3px 5px">${m.role}</td>
+      <td style="font-size:10px;padding:3px 5px;text-align:right">${m.focus}%</td>
+      <td style="font-weight:500;font-size:10px;white-space:nowrap;padding:3px 5px;text-align:right">${Math.round(c*10)/10}${unit}</td>
+      <td style="padding:3px 5px;width:55px"><div style="background:#eeede8;border-radius:3px;height:5px;width:50px;overflow:hidden"><div style="height:100%;width:${utilPct}%;background:${barColor};border-radius:3px"></div></div></td>
+    </tr>`;
+  });
+
+  // Velocity chart SVG
+  let velocityChart='';
+  if(allVel.length){
+    const vals=allVel;
+    const labels=state.velocity.map(v=>v.sprint);
+    const mx=Math.max(...vals,1);
+    const W=320,H=100,pad=22,barW=Math.min(22,Math.floor((W-pad*2)/vals.length*0.7));
+    const gap=(W-pad*2-barW*vals.length)/(vals.length+1);
+    let bars='';
+    vals.forEach((v,i)=>{
+      const x=pad+gap*(i+1)+barW*i;
+      const h=Math.max(4,Math.round((v/mx)*(H-32)));
+      const y=H-18-h;
+      bars+=`<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="2" fill="#B5D4F4"/>
+      <text x="${x+barW/2}" y="${y-2}" text-anchor="middle" font-size="8" fill="#6b6a65">${v}</text>
+      <text x="${x+barW/2}" y="${H-5}" text-anchor="middle" font-size="7" fill="#9e9d98">${labels[i]}</text>`;
+    });
+    const avgY=H-18-Math.round((avg3/mx)*(H-32));
+    velocityChart=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${bars}
+      <line x1="${pad}" y1="${avgY}" x2="${W-pad}" y2="${avgY}" stroke="#E24B4A" stroke-width="0.8" stroke-dasharray="3,2" opacity="0.7"/>
+      <text x="${W-pad-2}" y="${avgY-2}" text-anchor="end" font-size="7" fill="#E24B4A">Ø3</text></svg>`;
+  }
+
+  // Sprint goals list
+  let goalsList='';
+  if(goals.length){
+    goals.filter(g=>g.text).forEach(g=>{
+      goalsList+=`<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:10px">
+        <span style="display:inline-block;width:11px;height:11px;border-radius:3px;border:1.2px solid ${g.done?'#1D9E75':'#aaa'};background:${g.done?'#1D9E75':'transparent'};color:#fff;font-size:8px;line-height:9px;text-align:center;flex-shrink:0">${g.done?'✓':''}</span>
+        <span style="${g.done?'text-decoration:line-through;color:#9e9d98':'color:#1a1a18'}">${g.text}</span>
+      </div>`;
+    });
+  }
+
+  const now=new Date();
+  const teamName=document.getElementById('teamName').value||'Sprint-Bericht';
+
+  // 700px wide landscape report, designed to fit ~500px height
+  return`<div id="reportContent" style="background:#fff;color:#1a1a18;padding:14px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;width:700px;box-sizing:border-box">
+    <!-- HEADER (single row, compact) -->
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid rgba(0,0,0,0.1)">
+      <div style="font-size:16px;font-weight:600;line-height:1.2">${teamName}</div>
+      <div style="font-size:11px;color:#6b6a65">Sprint ${state.sprint.nr} · ${state.sprint.start||'?'} – ${state.sprint.end||'?'}</div>
+      <div style="font-size:9px;color:#9e9d98">${now.toLocaleDateString('de-AT')}</div>
+    </div>
+
+    <!-- METRIC STRIP (5 cells) -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:9px">
+      <div style="background:#f5f4f0;border-radius:5px;padding:6px 9px">
+        <div style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b6a65">Arbeitstage</div>
+        <div style="font-size:16px;font-weight:500;line-height:1.1">${wd}</div>
+      </div>
+      <div style="background:#f5f4f0;border-radius:5px;padding:6px 9px">
+        <div style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b6a65">Kapazität</div>
+        <div style="font-size:16px;font-weight:500;line-height:1.1">${Math.round(cap*10)/10}<span style="font-size:10px;color:#9e9d98">${unit}</span></div>
+      </div>
+      <div style="background:#f5f4f0;border-radius:5px;padding:6px 9px">
+        <div style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b6a65">Ø Velocity</div>
+        <div style="font-size:16px;font-weight:500;line-height:1.1">${avg3}<span style="font-size:10px;color:#9e9d98"> SP</span> <span style="font-size:9px;color:${trendColor};font-weight:600">${trendStr}</span></div>
+      </div>
+      <div style="background:#f5f4f0;border-radius:5px;padding:6px 9px">
+        <div style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b6a65">Ziele</div>
+        <div style="font-size:16px;font-weight:500;line-height:1.1">${goalRate!==null?goalRate+'%':'—'}${goalRate!==null?`<span style="font-size:9px;color:#9e9d98"> ${goalsDone}/${goalsTotal}</span>`:''}</div>
+      </div>
+      <div style="background:#f5f4f0;border-radius:5px;padding:6px 9px">
+        <div style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#6b6a65">Story Points</div>
+        <div style="font-size:16px;font-weight:500;line-height:1.1">${spRate!==null?spRate+'%':'—'}${spRate!==null?`<span style="font-size:9px;color:#9e9d98"> ${completed}/${committed}</span>`:''}</div>
+      </div>
+    </div>
+
+    <!-- TWO COLUMNS -->
+    <div style="display:grid;grid-template-columns:1.15fr 0.85fr;gap:12px;margin-bottom:9px">
+      <!-- LEFT: Team table + absences -->
+      <div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b6a65;margin-bottom:4px">Team-Kapazität</div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead><tr>
+            <th style="padding:3px 5px;text-align:left;background:#f5f4f0;font-size:8px;font-weight:600;color:#6b6a65;text-transform:uppercase;letter-spacing:.04em">Name</th>
+            <th style="padding:3px 5px;text-align:left;background:#f5f4f0;font-size:8px;font-weight:600;color:#6b6a65;text-transform:uppercase;letter-spacing:.04em">Rolle</th>
+            <th style="padding:3px 5px;text-align:right;background:#f5f4f0;font-size:8px;font-weight:600;color:#6b6a65;text-transform:uppercase;letter-spacing:.04em">Fok.</th>
+            <th style="padding:3px 5px;text-align:right;background:#f5f4f0;font-size:8px;font-weight:600;color:#6b6a65;text-transform:uppercase;letter-spacing:.04em">Kap.</th>
+            <th style="padding:3px 5px;background:#f5f4f0"></th>
+          </tr></thead>
+          <tbody>${memberRows}</tbody>
+        </table>
+        ${absenceLines.length?`
+        <div style="margin-top:8px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b6a65;margin-bottom:3px">Abwesenheiten</div>
+        <div style="font-size:9px;line-height:1.5">
+          ${absenceLines.map(a=>`<div><strong style="font-weight:500">${a.name}:</strong> <span style="color:#6b6a65">${a.txt}</span></div>`).join('')}
+        </div>`:''}
+      </div>
+      <!-- RIGHT: Velocity + Goals -->
+      <div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b6a65;margin-bottom:4px">Velocity-Verlauf</div>
+        ${velocityChart||'<div style="font-size:10px;color:#9e9d98;padding:20px 0;text-align:center">Keine Daten</div>'}
+        ${goalsList?`
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b6a65;margin-top:8px;margin-bottom:4px">Sprint-Ziele</div>
+        ${goalsList}`:''}
+      </div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b6a65;margin-bottom:4px">Sprint-Kalender</div>
+      <div style="display:grid;grid-template-columns:repeat(14,1fr);gap:3px">${dayCells}</div>
+    </div>
+  </div>`;
+}
+function openReport(){
+  document.getElementById('reportContent').innerHTML=buildReportHTML();
+  document.getElementById('reportModal').classList.add('open');
+}
+function closeReport(){document.getElementById('reportModal').classList.remove('open');}
+
+async function exportPDF(){
+  const el=document.getElementById('reportContent').firstElementChild;
+  const canvas=await html2canvas(el,{scale:3,useCORS:true,backgroundColor:'#ffffff'});
+  const imgData=canvas.toDataURL('image/png');
+  const {jsPDF}=window.jspdf;
+  // A4 landscape: 297×210mm. Report is 500px wide → fit width with margins.
+  const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const pW=pdf.internal.pageSize.getWidth();
+  const pH=pdf.internal.pageSize.getHeight();
+  const margin=10;
+  const availW=pW-margin*2;
+  const availH=pH-margin*2;
+  const iW=canvas.width,iH=canvas.height;
+  // scale to fit within available area
+  const scale=Math.min(availW/iW,availH/iH);
+  const drawW=iW*scale;
+  const drawH=iH*scale;
+  const x=(pW-drawW)/2;
+  const y=(pH-drawH)/2;
+  pdf.addImage(imgData,'PNG',x,y,drawW,drawH);
+  const name=(document.getElementById('teamName').value||'sprint').replace(/\s+/g,'-').toLowerCase();
+  pdf.save(`${name}-sprint-${state.sprint.nr}.pdf`);
+}
+
+async function exportPNG(){
+  const el=document.getElementById('reportContent').firstElementChild;
+  const canvas=await html2canvas(el,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
+  canvas.toBlob(async blob=>{
+    try{
+      await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+      const btn=document.querySelector('[onclick="exportPNG()"]');
+      const orig=btn.textContent;btn.textContent='✓ Kopiert!';
+      setTimeout(()=>btn.textContent=orig,2000);
+    }catch{
+      // fallback: download
+      const a=document.createElement('a');a.href=canvas.toDataURL('image/png');
+      a.download='sprint-report.png';a.click();
+    }
+  },'image/png');
+}
+
+// ─── Save / Load ──────────────────────────────────────────────────────────────
+function getState(){
+  return{
+    teamName:document.getElementById('teamName').value,
+    sprint:{
+      nr:Number(document.getElementById('sprintNr').value),
+      start:document.getElementById('sprintStart').value,
+      end:document.getElementById('sprintEnd').value,
+      unit:document.getElementById('unit').value,
+      meetingHours:Number(document.getElementById('meetingHours').value)||0,
+      committedSP:Number(document.getElementById('committedSP').value),
+      completedSP:Number(document.getElementById('completedSP').value),
+      goals:state.sprint.goals||[]
+    },
+    members:state.members,roles:state.roles,velocity:state.velocity,kpis:state.kpis
+  };
+}
+function exportFile(){
+  const data=getState();
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=(data.teamName||'team').replace(/\s+/g,'-').toLowerCase()+`-sprint-${data.sprint.nr}.json`;
+  a.click();URL.revokeObjectURL(url);
+  if(typeof markClean==='function')markClean();
+}
+function applyImportedState(d){
+  suppressDirty=true;
+  state.members=(d.members||[]).map(m=>({...m,dayStates:m.dayStates||{},meetingHours:m.meetingHours===undefined?null:m.meetingHours}));
+  state.roles=d.roles||[];
+  state.velocity=d.velocity||[];state.kpis=d.kpis||{goal:true,commit:false};
+  document.getElementById('teamName').value=d.teamName||'';
+  const sp=d.sprint||{};
+  document.getElementById('sprintNr').value=sp.nr||1;
+  document.getElementById('sprintStart').value=sp.start||'';
+  document.getElementById('sprintEnd').value=sp.end||'';
+  document.getElementById('unit').value=sp.unit||'days';
+  document.getElementById('meetingHours').value=sp.meetingHours!==undefined?sp.meetingHours:12;
+  document.getElementById('committedSP').value=sp.committedSP||0;
+  document.getElementById('completedSP').value=sp.completedSP||0;
+  state.sprint.goals=sp.goals||[];
+  // ensure nextGoalId is past any imported ids
+  if(state.sprint.goals.length){nextGoalId=Math.max(nextGoalId,...state.sprint.goals.map(g=>g.id||0))+1;}
+  ['goal','commit'].forEach(k=>{const btn=document.getElementById('kpi-'+k);if(btn)btn.classList.toggle('on',state.kpis[k]);});
+  renderAll();
+  suppressDirty=false;
+}
+function importFile(){document.getElementById('fileInput').click();}
+function handleImport(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      applyImportedState(d);
+      if(typeof markClean==='function')markClean();
+    }catch{alert('Datei konnte nicht geladen werden.');}
+  };
+  r.readAsText(file);e.target.value='';
+}
+function resetData(){
+  state={teamName:'Mein Scrum Team',sprint:{nr:1,start:'',end:'',unit:'days',committedSP:0,completedSP:0,meetingHours:12,goals:[]},members:[],roles:['Scrum Master','Product Owner','Developer','QA','Designer','DevOps'],velocity:[],kpis:{goal:true,commit:false}};
+  document.getElementById('teamName').value=state.teamName;
+  ['sprintNr','sprintStart','sprintEnd','committedSP','completedSP'].forEach(id=>document.getElementById(id).value=id==='sprintNr'?1:'');
+  document.getElementById('unit').value='days';
+  document.getElementById('meetingHours').value=12;
+  renderAll();
+  if(typeof markClean==='function')markClean();
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+function showTab(name,btn){
+  ['sprint','team','velocity','settings'].forEach(t=>document.getElementById('tab-'+t).style.display='none');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).style.display='block';
+  btn.classList.add('active');
+  if(name==='sprint'){renderMemberAbsences();renderMetrics();renderCapacityDetail();}
+  if(name==='velocity'){sortVelocityIfNumeric();renderVelocityList();renderVelocityMetrics();renderVelocityChart();}
+  if(name==='team'){renderMembers();renderRoles();}
+}
+function renderAll(){renderSprintGoals();renderMemberAbsences();renderMembers();renderRoles();renderMetrics();renderCapacityDetail();renderSpGoalStatus();renderVelocityMetrics();renderVelocityChart();}
+
+// ─── Autosave & Dirty Tracking ────────────────────────────────────────────────
+const STORAGE_KEY='scrum-sprint-planner-autosave';
+let isDirty=false;
+let autosaveTimer=null;
+let lastSavedSnapshot=null;
+let suppressDirty=true; // suppress until init() completes
+
+function snapshotState(){return JSON.stringify(getState());}
+
+function markDirty(){
+  if(suppressDirty)return;
+  isDirty=true;
+  updateSaveIndicator();
+  // debounced localStorage backup
+  clearTimeout(autosaveTimer);
+  autosaveTimer=setTimeout(()=>{
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify({savedAt:new Date().toISOString(),data:getState()}));}catch(e){}
+  },600);
+}
+
+function markClean(){
+  isDirty=false;
+  lastSavedSnapshot=snapshotState();
+  try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
+  updateSaveIndicator();
+}
+
+function updateSaveIndicator(){
+  const el=document.getElementById('saveIndicator');
+  if(!el)return;
+  if(isDirty){el.className='save-indicator dirty';el.textContent='Ungespeicherte Änderungen';}
+  else if(lastSavedSnapshot){el.className='save-indicator saved';el.textContent='Gespeichert';setTimeout(()=>{if(!isDirty){el.className='save-indicator empty';}},2500);}
+  else{el.className='save-indicator empty';el.textContent='';}
+}
+
+function checkAutosaveOnLoad(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw)return false;
+    const{savedAt,data}=JSON.parse(raw);
+    const when=new Date(savedAt);
+    const ago=Math.round((Date.now()-when.getTime())/60000);
+    const agoStr=ago<60?`vor ${ago} Min`:ago<1440?`vor ${Math.round(ago/60)} Std`:`vor ${Math.round(ago/1440)} Tagen`;
+    if(confirm(`Ungespeicherte Änderungen vom letzten Mal gefunden (${agoStr}, Team: "${data.teamName||'?'}"). Wiederherstellen?`)){
+      applyImportedState(data);
+      isDirty=true;updateSaveIndicator();
+      return true;
+    }else{
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }catch(e){}
+  return false;
+}
+
+// warn on unload if dirty
+window.addEventListener('beforeunload',e=>{
+  if(isDirty){e.preventDefault();e.returnValue='';}
+});
+
+
+function init(){
+  const today=new Date();
+  const mon=new Date(today);mon.setDate(today.getDate()-((today.getDay()+6)%7));
+  const fri=new Date(mon);fri.setDate(mon.getDate()+13);
+  document.getElementById('sprintStart').value=fmtDate(mon);
+  document.getElementById('sprintEnd').value=fmtDate(fri);
+  renderAll();recalc();
+  // After everything is rendered, check for autosave
+  const restored=checkAutosaveOnLoad();
+  if(!restored){
+    isDirty=false;
+    lastSavedSnapshot=null;
+    updateSaveIndicator();
+  }
+  // Now allow dirty tracking
+  suppressDirty=false;
+}
+init();
+</script>
+</body>
+</html>
