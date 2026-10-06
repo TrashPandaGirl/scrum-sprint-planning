@@ -1,0 +1,7 @@
+{
+  "name": "scrum-sprint-planning",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
