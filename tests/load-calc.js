@@ -15,13 +15,13 @@ function slice(from, to) {
 
 const source = [
   slice('function getAustrianHolidays', 'Object.assign(HOLIDAYS,getAustrianHolidays(y));'),
-  slice('function curSprint()', '// ─── Sprint navigation'),
+  slice('function curSprint()', '// ─── End of pure calculations'),
 ].join('\n');
 
 function loadCalc(state) {
   const ctx = vm.createContext({ state });
   vm.runInContext(
-    `${source}\n;this.api={getAustrianHolidays,HOLIDAYS,isHoliday,isWorkday,getSprintDays,getSprintWorkdays,memberDailyRate,memberMeetingHours,memberTheoreticalMaxHours,memberTheoreticalMax,memberSprintCapacity,teamTotalCapacity,memberAvailableHours,memberBaselineHours,memberAbsenceDays,commitmentRecommendation,velocityForecast,backlogForecast,forecastSprintEnd};`,
+    `${source}\n;this.api={getAustrianHolidays,HOLIDAYS,isHoliday,isWorkday,getSprintDays,getSprintWorkdays,memberDailyRate,memberMeetingHours,memberTheoreticalMaxHours,memberTheoreticalMax,memberSprintCapacity,teamTotalCapacity,memberAvailableHours,memberBaselineHours,memberAbsenceDays,commitmentRecommendation,velocityForecast,backlogForecast,forecastSprintEnd,PALETTES,derivePalette,contrastRatio,mixHex};`,
     ctx,
   );
   return ctx.api;
