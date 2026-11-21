@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sprint Planner</title>
 <template id="__bundler_thumbnail" data-bg-color="#1D9E75">
-  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <rect x="300" y="170" width="600" height="460" rx="40" fill="#ffffff"/>
     <rect x="370" y="250" width="320" height="40" rx="20" fill="#1D9E75"/>
     <rect x="370" y="330" width="460" height="26" rx="13" fill="#cfeede"/>
@@ -50,8 +50,14 @@
 :root[data-contrast="high"] .metric-value,
 :root[data-contrast="high"] .metric-label{color:#000 !important;}
 :root[data-contrast="high"] .tab.active{background:#000 !important;color:#fff !important;}
-:root[data-contrast="high"] .btn-danger{background:#c20000 !important;color:#fff !important;}
+:root[data-contrast="high"] .btn-danger,
+:root[data-contrast="high"] #btnDeleteSprint{background:#c20000 !important;color:#fff !important;border:2px solid #000 !important;}
 *{box-sizing:border-box;margin:0;padding:0;}
+/* Keyboard focus */
+:where(a,button,input,select,textarea,[tabindex]):focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+/* Icons (inline SVG sprite) */
+.ico{width:1.15em;height:1.15em;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-0.2em;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;}
 .app{max-width:980px;margin:0 auto;padding:24px 20px;}
 /* Topbar */
@@ -85,8 +91,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .toast{background:var(--text);color:var(--bg);padding:16px 26px;border-radius:var(--radius-lg);font-size:17px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:12px;max-width:min(560px,90vw);box-shadow:0 10px 34px rgba(0,0,0,0.30),0 0 0 1px rgba(255,255,255,0.10);animation:toastIn .28s cubic-bezier(.2,1.5,.4,1);pointer-events:auto;}
 .toast::before{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:999px;font-size:16px;font-weight:700;}
 .toast.success::before{content:'✓';background:#9FE1CB;color:#0b3b2c;}
-.toast.error::before{content:'✕';background:#F09595;color:#4a0f0f;}
-.toast.info::before{content:'ℹ';background:#B5D4F4;color:#0d3358;}
+.toast.error::before{content:'×';background:#F09595;color:#4a0f0f;}
+.toast.info::before{content:'i';background:#B5D4F4;color:#0d3358;}
 @keyframes toastIn{0%{opacity:0;transform:translateY(14px) scale(.94);}60%{opacity:1;}100%{opacity:1;transform:translateY(0) scale(1);}}
 /* Onboarding */
 .onboarding-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:250;align-items:center;justify-content:center;}
@@ -221,47 +227,57 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+</svg>
 <div class="app">
   <!-- Topbar -->
   <div class="topbar">
     <div class="topbar-row1">
-      <input class="team-name-input" id="teamName" value="Mein Scrum Team" placeholder="Teamname..." oninput="if(typeof markDirty==='function')markDirty()">
+      <input class="team-name-input" id="teamName" aria-label="Teamname" value="Mein Scrum Team" placeholder="Teamname..." oninput="if(typeof markDirty==='function')markDirty()">
       <span id="saveIndicator" class="save-indicator" title="Speicherstatus"></span>
     </div>
     <div class="topbar-actions">
-      <button class="btn" id="themeToggle" onclick="cycleTheme()" title="Hell / Dunkel / System" style="padding:7px 10px;">🌓</button>
-      <button class="btn" id="contrastToggle" onclick="toggleContrast()" title="Hoher Kontrast (für Beamer)" style="padding:7px 10px;">◑</button>
+      <button type="button" class="btn" id="themeToggle" onclick="cycleTheme()" title="Hell / Dunkel / System" style="padding:7px 10px;" aria-label="Theme wechseln"><svg class="ico" aria-hidden="true"><use href="#i-theme"/></svg></button>
+      <button type="button" class="btn" id="contrastToggle" onclick="toggleContrast()" title="Hoher Kontrast (für Beamer)" style="padding:7px 10px;">◑</button>
       <!-- Sprint navigation -->
       <div class="sprint-nav" style="background-color: rgb(206, 222, 255); color: rgb(0, 0, 80)">
-        <button id="btnPrevSprint" onclick="navigateSprint(-1)" title="Vorheriger Sprint" style="color: rgb(0, 0, 80)">‹</button>
+        <button type="button" id="btnPrevSprint" onclick="navigateSprint(-1)" title="Vorheriger Sprint" style="color: rgb(0, 0, 80)">‹</button>
         <span id="sprintNavLabel" class="sprint-badge" style="color: rgb(0, 0, 80)">Sprint 1</span>
-        <button id="btnNextSprint" onclick="navigateSprint(1)" title="Nächster Sprint">›</button>
+        <button type="button" id="btnNextSprint" onclick="navigateSprint(1)" title="Nächster Sprint">›</button>
       </div>
-      <button class="btn" id="btnStartSprint" onclick="toggleSprintStarted()" title="Sprint starten / beenden">▶ Sprint starten</button>
+      <button type="button" class="btn" id="btnStartSprint" onclick="toggleSprintStarted()" title="Sprint starten / beenden">▶ Sprint starten</button>
       <span id="sprintStatusBadge" style="display:none;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;white-space:nowrap"></span>
-      <button class="btn" onclick="newSprint()" title="Aktuellen Sprint abschließen und neuen anlegen" style="background-color: rgb(0, 98, 116); color: rgb(238, 252, 255)">+ Nächster Sprint</button>
-      <button class="btn" onclick="showLoadMenu(this)" id="btnLoad">↑ Laden ▾</button>
+      <button type="button" class="btn" onclick="newSprint()" title="Aktuellen Sprint abschließen und neuen anlegen" style="background-color: rgb(0, 98, 116); color: rgb(238, 252, 255)">+ Nächster Sprint</button>
+      <button type="button" class="btn" onclick="showLoadMenu(this)" id="btnLoad">↑ Laden ▾</button>
       <div id="loadMenu" style="display:none;position:absolute;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,0.12);padding:4px 0;z-index:50;min-width:200px;">
-        <button onclick="importFile();closeLoadMenu()" style="display:block;width:100%;text-align:left;padding:9px 14px;font-size:13px;background:none;border:none;cursor:pointer;color:var(--text);font-family:inherit;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='none'">📂 Datei öffnen…</button>
-        <button onclick="loadFromClipboard();closeLoadMenu()" style="display:block;width:100%;text-align:left;padding:9px 14px;font-size:13px;background:none;border:none;cursor:pointer;color:var(--text);font-family:inherit;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='none'">📋 Aus Zwischenablage laden</button>
+        <button type="button" onclick="importFile();closeLoadMenu()" style="display:block;width:100%;text-align:left;padding:9px 14px;font-size:13px;background:none;border:none;cursor:pointer;color:var(--text);font-family:inherit;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='none'"><svg class="ico" aria-hidden="true"><use href="#i-folder"/></svg> Datei öffnen…</button>
+        <button type="button" onclick="loadFromClipboard();closeLoadMenu()" style="display:block;width:100%;text-align:left;padding:9px 14px;font-size:13px;background:none;border:none;cursor:pointer;color:var(--text);font-family:inherit;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='none'"><svg class="ico" aria-hidden="true"><use href="#i-clipboard"/></svg> Aus Zwischenablage laden</button>
         <div id="lastFileHint" style="display:none;padding:6px 14px;font-size:11px;color:var(--text3);border-top:0.5px solid var(--border)"></div>
       </div>
-      <button class="btn" id="btn-planning-sheet" onclick="openReport()">Planning Sheet</button>
-      <input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleImport(event)">
+      <button type="button" class="btn" id="btn-planning-sheet" onclick="openReport()">Planning Sheet</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none" tabindex="-1" onchange="handleImport(event)">
       <div style="flex:0 0 100%;display:flex;gap:8px;align-items:center;position:relative;margin-top:2px">
-        <button class="btn btn-primary" onclick="exportFile()" id="btnSave">↓ Speichern</button>
-        <button class="btn btn-primary" onclick="copyToClipboard()" title="Daten in Zwischenablage kopieren – zum Teilen via Teams-Chat" style="padding:7px 10px;">📋</button>
-        <button id="btnDeleteSprint" onclick="deleteSprint()" title="Aktuellen Sprint samt aller Daten löschen" style="margin-left:auto;font-size:12px;font-weight:600;padding:6px 12px;border-radius:var(--radius);cursor:pointer;font-family:inherit;color:var(--red);border:1px solid color-mix(in srgb, var(--red) 45%, transparent);background:color-mix(in srgb, var(--red) 8%, transparent);transition:background .15s ease" onmouseover="this.style.background='color-mix(in srgb, var(--red) 16%, transparent)'" onmouseout="this.style.background='color-mix(in srgb, var(--red) 8%, transparent)'">🗑 Sprint löschen</button>
+        <button type="button" class="btn btn-primary" onclick="exportFile()" id="btnSave">↓ Speichern</button>
+        <button type="button" class="btn btn-primary" onclick="copyToClipboard()" title="Daten in Zwischenablage kopieren – zum Teilen via Teams-Chat" style="padding:7px 10px;" aria-label="In Zwischenablage kopieren"><svg class="ico" aria-hidden="true"><use href="#i-clipboard"/></svg></button>
+        <button type="button" id="btnDeleteSprint" onclick="deleteSprint()" title="Aktuellen Sprint samt aller Daten löschen" style="margin-left:auto;font-size:12px;font-weight:600;padding:6px 12px;border-radius:var(--radius);cursor:pointer;font-family:inherit;color:var(--red);border:1px solid color-mix(in srgb, var(--red) 45%, transparent);background:color-mix(in srgb, var(--red) 8%, transparent);transition:background .15s ease" onmouseover="this.style.background='color-mix(in srgb, var(--red) 16%, transparent)'" onmouseout="this.style.background='color-mix(in srgb, var(--red) 8%, transparent)'"><svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg> Sprint löschen</button>
       </div>
     </div>
   </div>
 
   <!-- Tabs -->
   <div class="tabs">
-    <button class="tab active" onclick="showTab('sprint',this)">Sprint</button>
-    <button class="tab" onclick="showTab('team',this)">Team</button>
-    <button class="tab" data-tab="velocity" onclick="showTab('velocity',this)">Velocity</button>
-    <button class="tab" onclick="showTab('settings',this)">Einstellungen</button>
+    <button type="button" class="tab active" onclick="showTab('sprint',this)">Sprint</button>
+    <button type="button" class="tab" onclick="showTab('team',this)">Team</button>
+    <button type="button" class="tab" data-tab="velocity" onclick="showTab('velocity',this)">Velocity</button>
+    <button type="button" class="tab" onclick="showTab('settings',this)">Einstellungen</button>
   </div>
 
   <!-- SPRINT TAB -->
@@ -286,9 +302,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="card">
         <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end">
           <div><div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Geplant</div>
-            <input type="number" id="committedSP" value="0" min="0" onchange="recalc()" style="font-size: 13px; padding: 5px 8px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--field); color: var(--text); width: 120px; font-family: inherit; outline: none"></div>
+            <input type="number" id="committedSP" value="0" min="0" onchange="recalc()" style="font-size: 13px; padding: 5px 8px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--field); color: var(--text); width: 120px; font-family: inherit"></div>
           <div><div id="completedSPLabel" style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">Abgeschlossen</div>
-            <input type="number" id="completedSP" value="0" min="0" onchange="recalc()" style="font-size: 13px; padding: 5px 8px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--field); color: var(--text); width: 120px; font-family: inherit; outline: none"></div>
+            <input type="number" id="completedSP" value="0" min="0" onchange="recalc()" style="font-size: 13px; padding: 5px 8px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--field); color: var(--text); width: 120px; font-family: inherit"></div>
           <div id="spGoalStatus" style="font-size:13px;color:var(--text2);flex:1;min-width:200px"></div>
         </div>
       </div>
@@ -298,7 +314,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="section" id="section-goals">
       <div class="section-header">
         <span class="section-label">Sprint-Ziele</span>
-        <button class="btn" onclick="addSprintGoal()">+ Ziel</button>
+        <button type="button" class="btn" onclick="addSprintGoal()">+ Ziel</button>
       </div>
       <div class="card" id="sprintGoalsList"></div>
     </div>
@@ -310,8 +326,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="metric-value" id="kpiWorkdays">0</div>
         <div class="metric-sub" id="kpiWorkdaysSub">0 Feiertage</div>
         <div style="display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border)">
-          <div style="flex:1"><label style="font-size:10px;color:var(--text2);display:block;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Start</label><input type="date" id="sprintStart" onchange="recalc()" style="width:100%;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit;outline:none"></div>
-          <div style="flex:1"><label style="font-size:10px;color:var(--text2);display:block;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Ende</label><input type="date" id="sprintEnd" onchange="recalc()" style="width:100%;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit;outline:none"></div>
+          <div style="flex:1"><label style="font-size:10px;color:var(--text2);display:block;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Start</label><input type="date" id="sprintStart" onchange="recalc()" style="width:100%;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit"></div>
+          <div style="flex:1"><label style="font-size:10px;color:var(--text2);display:block;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Ende</label><input type="date" id="sprintEnd" onchange="recalc()" style="width:100%;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit"></div>
         </div>
       </div>
       <div class="metric-card">
@@ -320,7 +336,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="metric-sub">nach Fokus &amp; Meetings</div>
         <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border)">
           <label style="font-size:10px;color:var(--text2);display:block;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.06em">Einheit</label>
-          <select id="unit" onchange="recalc()" style="width:100%;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit;outline:none"><option value="days">Tage</option><option value="hours">Stunden</option></select>
+          <select id="unit" onchange="recalc()" style="width:100%;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit"><option value="days">Tage</option><option value="hours">Stunden</option></select>
         </div>
       </div>
       <div class="metric-card">
@@ -355,17 +371,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <!-- TEAM TAB -->
   <div id="tab-team" style="display:none">
     <div class="section">
-      <div class="section-header"><span class="section-label">Rollen</span><button class="btn" onclick="addRole()">+ Rolle</button></div>
+      <div class="section-header"><span class="section-label">Rollen</span><button type="button" class="btn" onclick="addRole()">+ Rolle</button></div>
       <div class="card" id="roleList"></div>
     </div>
     <div class="section">
       <div class="section-header"><span class="section-label">Meetings</span></div>
       <div class="card">
-        <div class="sprint-info capacity-field" id="meetings-field" title="Globaler Default. Kann pro Person unten überschrieben werden." style="max-width:220px;background:transparent;padding:0"><label>Meetings (h/Sprint)</label><input type="number" id="meetingHours" value="12" min="0" step="0.5" onchange="recalc();renderMembers()"></div>
+        <div class="sprint-info capacity-field" id="meetings-field" title="Globaler Default. Kann pro Person unten überschrieben werden." style="max-width:220px;background:transparent;padding:0"><label>Meetings (h/Sprint)</label><input type="number" id="meetingHours" value="12" min="0" step="0.5" aria-describedby="meetingHoursHint" onchange="recalc();renderMembers()"><span class="sr-only" id="meetingHoursHint">Globaler Default. Kann pro Person unten überschrieben werden.</span></div>
       </div>
     </div>
     <div class="section">
-      <div class="section-header"><span class="section-label">Teammitglieder</span><button class="btn" onclick="addMember()">+ Mitglied</button></div>
+      <div class="section-header"><span class="section-label">Teammitglieder</span><button type="button" class="btn" onclick="addMember()">+ Mitglied</button></div>
       <div class="card">
         <div style="font-size:12px;color:var(--text2);background:var(--bg2);padding:10px 12px;border-radius:var(--radius);margin-bottom:10px;line-height:1.5">
           <strong style="color:var(--text)">Fokus %</strong> = welcher Anteil der reinen Arbeitszeit realistisch für Sprint-Arbeit zur Verfügung steht (nach Abzug von Meetings, Refinements, Support, Slack, etc.). Typisch 60–80% bei Devs, 40–60% bei Scrum Mastern.
@@ -382,11 +398,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="section">
       <div class="section-header">
         <span class="section-label">Sprint-Historie</span>
-        <button class="btn" onclick="addVelocityEntry()">+ Eintrag</button>
+        <button type="button" class="btn" onclick="addVelocityEntry()">+ Eintrag</button>
       </div>
       <div class="card">
         <div id="velocityHeader" style="display:grid;grid-template-columns:90px minmax(0,1fr) 80px 90px 28px;gap:8px;padding:0 0 7px;font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.06em;border-bottom:0.5px solid var(--border);margin-bottom:2px">
-          <span>Sprint</span><span>Notiz</span><span>SP</span><span class="adj-col" title="Nachträglich kalibrierte Story Points (keine Jira-Verzerrung)">Adjusted SP ⓘ</span><span></span>
+          <span>Sprint</span><span>Notiz</span><span>SP</span><span class="adj-col" title="Nachträglich kalibrierte Story Points (keine Jira-Verzerrung)" tabindex="0" aria-describedby="adjSpHint">Adjusted SP ⓘ<span class="sr-only" id="adjSpHint">Nachträglich kalibrierte Story Points (keine Jira-Verzerrung)</span></span><span></span>
         </div>
         <div id="velocityList"></div>
       </div>
@@ -402,15 +418,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="section">
       <div class="section-header">
         <span class="section-label">Module</span>
-        <button class="btn btn-sm" onclick="openWizard()">⚙ Setup-Wizard</button>
+        <button type="button" class="btn btn-sm" onclick="openWizard()"><svg class="ico" aria-hidden="true"><use href="#i-gear"/></svg> Setup-Wizard</button>
       </div>
       <div class="card" id="moduleToggles"></div>
     </div>
     <div class="section">
       <div class="section-label" style="margin-bottom:10px">Optionale Metriken</div>
       <div class="card">
-        <div class="toggle-row"><label>Sprint-Ziele Erreichung (in Metrik-Kacheln)</label><button class="toggle on" id="kpi-goal" onclick="toggleKpi('goal',this)"></button></div>
-        <div class="toggle-row"><label>Commitment Rate (in Metrik-Kacheln)</label><button class="toggle" id="kpi-commit" onclick="toggleKpi('commit',this)"></button></div>
+        <div class="toggle-row"><label>Sprint-Ziele Erreichung (in Metrik-Kacheln)</label><button type="button" class="toggle on" id="kpi-goal" onclick="toggleKpi('goal',this)"></button></div>
+        <div class="toggle-row"><label>Commitment Rate (in Metrik-Kacheln)</label><button type="button" class="toggle" id="kpi-commit" onclick="toggleKpi('commit',this)"></button></div>
       </div>
     </div>
     <div class="section">
@@ -418,9 +434,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="card">
         <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Deine Daten werden automatisch im Browser gespeichert und beim nächsten Öffnen geladen. Mit "Speichern als JSON" erstellst du zusätzlich eine Datei zum Teilen (Teams-Channel) oder für ein anderes Gerät.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" onclick="importFile()">↑ Datei laden</button>
-          <button class="btn btn-primary" onclick="exportFile()">↓ Speichern als JSON</button>
-          <button class="btn btn-danger" onclick="if(confirm('Alle Daten zurücksetzen?'))resetData()">↺ Zurücksetzen</button>
+          <button type="button" class="btn" onclick="importFile()">↑ Datei laden</button>
+          <button type="button" class="btn btn-primary" onclick="exportFile()">↓ Speichern als JSON</button>
+          <button type="button" class="btn btn-danger" onclick="if(confirm('Alle Daten zurücksetzen?'))resetData()">↺ Zurücksetzen</button>
         </div>
       </div>
     </div>
@@ -440,9 +456,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="modal-header">
       <span style="font-size:16px;font-weight:500">Planning Sheet</span>
       <div style="display:flex;gap:8px">
-        <button class="btn" onclick="exportPNG()">PNG → Zwischenablage</button>
-        <button class="btn btn-primary" onclick="exportPDF()">PDF herunterladen</button>
-        <button class="btn" onclick="closeReport()">✕</button>
+        <button type="button" class="btn" onclick="exportPNG()">PNG → Zwischenablage</button>
+        <button type="button" class="btn btn-primary" onclick="exportPDF()">PDF herunterladen</button>
+        <button type="button" class="btn" onclick="closeReport()" aria-label="Schließen"><svg class="ico" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
     </div>
     <div id="reportContent"></div>
@@ -455,8 +471,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div style="font-size:16px;font-weight:600;margin-bottom:8px" id="confirmTitle">Sprint beenden?</div>
     <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:18px" id="confirmBody">Möchtest du diesen Sprint wirklich beenden? Er wird als abgeschlossen markiert.</div>
     <div style="display:flex;justify-content:flex-end;gap:8px">
-      <button class="btn" onclick="closeConfirm()">Abbrechen</button>
-      <button class="btn btn-danger" id="confirmOkBtn" onclick="runConfirm()">Sprint beenden</button>
+      <button type="button" class="btn" onclick="closeConfirm()">Abbrechen</button>
+      <button type="button" class="btn btn-danger" id="confirmOkBtn" onclick="runConfirm()">Sprint beenden</button>
     </div>
   </div>
 </div>
@@ -464,7 +480,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <!-- DRAG & DROP OVERLAY -->
 <div class="drop-overlay" id="dropOverlay">
   <div class="drop-overlay-inner">
-    <h2>📂 Datei loslassen</h2>
+    <h2><svg class="ico" aria-hidden="true"><use href="#i-folder"/></svg> Datei loslassen</h2>
     <p>Sprint-Planner JSON-Datei hier ablegen um sie zu laden</p>
   </div>
 </div>
@@ -475,14 +491,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <!-- ONBOARDING MODAL -->
 <div class="onboarding-modal" id="onboardingModal">
   <div class="onboarding-box">
-    <h2>👋 Willkommen beim Sprint Planner</h2>
+    <h2>Willkommen beim Sprint Planner</h2>
     <p>Ein paar Dinge die du wissen solltest:</p>
     <div class="step"><div class="step-num">1</div><p><strong>Automatisch gespeichert:</strong> Deine Eingaben bleiben im Browser erhalten — auch wenn du den Tab schließt oder den Laptop neustartest. Du musst nichts manuell speichern um weiterzuarbeiten.</p></div>
     <div class="step"><div class="step-num">2</div><p><strong>Teilen & Sichern:</strong> Mit "↓ Speichern" lädst du eine <code>.json</code>-Datei runter. Leg sie in euren Teams-Channel — dann kann auch der PO oder deine Vertretung damit arbeiten, und du hast ein Backup.</p></div>
     <div class="step"><div class="step-num">3</div><p><strong>Daten laden:</strong> JSON-Datei einfach ins Fenster ziehen, oder über "↑ Laden" öffnen. Oder per "Aus Zwischenablage laden" wenn dir jemand die Daten im Teams-Chat geschickt hat.</p></div>
     <div class="step"><div class="step-num">4</div><p><strong>Neues Gerät:</strong> Auf einem anderen Laptop ist das Tool erstmal leer — dort einfach einmal die JSON-Datei aus dem Teams-Channel laden, dann ist alles wieder da.</p></div>
     <div style="margin-top:20px;display:flex;justify-content:flex-end">
-      <button class="btn btn-primary" onclick="closeOnboarding()">Alles klar, loslegen →</button>
+      <button type="button" class="btn btn-primary" onclick="closeOnboarding()">Alles klar, loslegen →</button>
     </div>
   </div>
 </div>
@@ -555,7 +571,7 @@ function applyTheme(theme){
 function updateThemeToggleIcon(theme){
   const btn=document.getElementById('themeToggle');
   if(!btn)return;
-  btn.textContent=theme==='light'?'☀️':theme==='dark'?'🌙':'🌓';
+  btn.innerHTML=`<svg class="ico" aria-hidden="true"><use href="#i-${theme==='light'?'sun':theme==='dark'?'moon':'theme'}"/></svg>`;
   btn.title=`Theme: ${theme==='light'?'Hell':theme==='dark'?'Dunkel':'System'} (klicken zum Wechseln)`;
 }
 function cycleTheme(){
@@ -1147,16 +1163,16 @@ function renderMembers(){
       <input value="${m.name}" onchange="state.members[${i}].name=this.value;recalc()" onblur="renderCapacityDetail()">
       <select onchange="state.members[${i}].role=this.value;recalc()">${roleOpts.replace(`value="${m.role}"`,`value="${m.role}" selected`)}</select>
       <input type="number" value="${m.focus}" min="0" max="100" placeholder="Fokus %" onchange="state.members[${i}].focus=Number(this.value);recalc()">
-      <button class="del-btn" tabindex="-1" onclick="state.members.splice(${i},1);renderMembers();recalc()" aria-label="Löschen">✕</button>
+      <button type="button" class="del-btn" tabindex="-1" onclick="state.members.splice(${i},1);renderMembers();recalc()" aria-label="Löschen">✕</button>
     </div>
     <div class="member-expand">
       <div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Arbeitstage & Stunden</div>
       <div class="workday-checks">
         ${[1,2,3,4,5,6,0].map(dn=>`<label class="day-check"><input type="checkbox" tabindex="-1" ${m.workDays.includes(dn)?'checked':''} onchange="toggleWorkday(${i},${dn},this.checked)"> ${dayNames[dn]}</label>`).join('')}
         <span style="margin-left:8px;font-size:12px;color:var(--text2)">Std/Woche:</span>
-        <input type="number" value="${m.weeklyHours}" min="1" max="60" style="width:60px;font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit;outline:none" onchange="state.members[${i}].weeklyHours=Number(this.value);recalc()">
+        <input type="number" value="${m.weeklyHours}" min="1" max="60" style="width:60px;font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit" onchange="state.members[${i}].weeklyHours=Number(this.value);recalc()">
         <span style="margin-left:12px;font-size:12px;color:var(--text2)" title="Eigene Meeting-Last. Leer = globaler Default aus Sprint-Tab.">Meetings h/Sprint:</span>
-        <input type="number" value="${m.meetingHours===null||m.meetingHours===undefined?'':m.meetingHours}" min="0" step="0.5" placeholder="(${Number(curSprint().meetingHours)||0})" style="width:64px;font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit;outline:none" onchange="state.members[${i}].meetingHours=this.value===''?null:Number(this.value);recalc();renderMembers()">
+        <input type="number" value="${m.meetingHours===null||m.meetingHours===undefined?'':m.meetingHours}" min="0" step="0.5" placeholder="(${Number(curSprint().meetingHours)||0})" style="width:64px;font-size:12px;padding:3px 6px;border:0.5px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-family:inherit" onchange="state.members[${i}].meetingHours=this.value===''?null:Number(this.value);recalc();renderMembers()">
       </div>
     </div>`;
   });
@@ -1177,8 +1193,8 @@ function renderRoles(){
   let html='';
   state.roles.forEach((r,i)=>{
     html+=`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--border)">
-      <input style="flex:1;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit;outline:none" value="${r}" onchange="state.roles[${i}]=this.value;renderMembers()">
-      <button class="del-btn" onclick="state.roles.splice(${i},1);renderRoles();renderMembers()">✕</button>
+      <input style="flex:1;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit" value="${r}" onchange="state.roles[${i}]=this.value;renderMembers()">
+      <button type="button" class="del-btn" onclick="state.roles.splice(${i},1);renderRoles();renderMembers()">✕</button>
     </div>`;
   });
   el.innerHTML=html||'<div class="empty">Keine Rollen definiert.</div>';
@@ -1215,7 +1231,7 @@ function renderVelocityList(){
       <input value="${v.note||''}" placeholder="Notiz..." onchange="state.velocity[${i}].note=this.value;if(typeof markDirty==='function')markDirty()">
       <input type="number" value="${v.sp}" min="0" onchange="state.velocity[${i}].sp=Number(this.value);onVelocityChange()">
       ${adjInput}
-      <button class="del-btn" onclick="state.velocity.splice(${i},1);onVelocityChange()">✕</button>
+      <button type="button" class="del-btn" onclick="state.velocity.splice(${i},1);onVelocityChange()">✕</button>
     </div>`;
   });
   el.innerHTML=html;
@@ -1340,8 +1356,8 @@ function renderSprintGoals(){
   sp.goals.forEach((g,i)=>{
     html+=`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid var(--border)">
       <input type="checkbox" ${g.done?'checked':''} onchange="toggleSprintGoal(${i},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--green);flex-shrink:0">
-      <input value="${(g.text||'').replace(/"/g,'&quot;')}" placeholder="Ziel..." onchange="curSprint().goals[${i}].text=this.value;if(typeof markDirty==='function')markDirty()" style="flex:1;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit;outline:none${g.done?';text-decoration:line-through;opacity:0.6':''}">
-      <button class="del-btn" tabindex="-1" onclick="curSprint().goals.splice(${i},1);renderSprintGoals();renderMetrics();if(typeof markDirty==='function')markDirty()">✕</button>
+      <input value="${(g.text||'').replace(/"/g,'&quot;')}" placeholder="Ziel..." onchange="curSprint().goals[${i}].text=this.value;if(typeof markDirty==='function')markDirty()" style="flex:1;font-size:13px;padding:5px 8px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:inherit${g.done?';text-decoration:line-through;opacity:0.6':''}">
+      <button type="button" class="del-btn" tabindex="-1" onclick="curSprint().goals.splice(${i},1);renderSprintGoals();renderMetrics();if(typeof markDirty==='function')markDirty()">✕</button>
     </div>`;
   });
   const done=sp.goals.filter(g=>g.done&&g.text).length;
@@ -1628,7 +1644,7 @@ function renderModuleToggles(){
     const parentOff=isChild&&!mod(def.parent);
     html+=`<div class="toggle-row" style="${isChild?'padding-left:20px;':''} ${parentOff?'opacity:0.4;pointer-events:none;':''}">
       <div><div style="font-size:13px">${def.label}</div><div style="font-size:11px;color:var(--text3);margin-top:1px">${def.desc}</div></div>
-      <button class="toggle ${on?'on':''}" onclick="toggleModule('${def.key}',this)" ${parentOff?'disabled':''}></button>
+      <button type="button" class="toggle ${on?'on':''}" onclick="toggleModule('${def.key}',this)" ${parentOff?'disabled':''}></button>
     </div>`;
   });
   el.innerHTML=html;
@@ -1683,7 +1699,7 @@ function renderWizardStep(){
       <div style="font-size:40px;margin-bottom:16px">✅</div>
       <h2 style="font-size:18px;font-weight:600;margin-bottom:8px">Fertig!</h2>
       <p style="font-size:13px;color:var(--text2);margin-bottom:24px">Module jederzeit unter Einstellungen anpassen.</p>
-      <button class="btn btn-primary" onclick="closeWizard()">Los geht's →</button></div>`;
+      <button type="button" class="btn btn-primary" onclick="closeWizard()">Los geht's →</button></div>`;
     return;
   }
   const step=WIZARD_STEPS[wizardStep];
@@ -1691,7 +1707,7 @@ function renderWizardStep(){
   const current=visSteps.indexOf(step)+1;
   const total=visSteps.length;
   const progress=Math.round(((wizardStep)/WIZARD_STEPS.length)*100);
-  let opts=step.options.map((o,i)=>`<button onclick="wizardChoose(${i})" style="display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s" onmouseover="this.style.borderColor='var(--blue)';this.style.background='var(--blue-bg)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg2)'">
+  let opts=step.options.map((o,i)=>`<button type="button" onclick="wizardChoose(${i})" style="display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s" onmouseover="this.style.borderColor='var(--blue)';this.style.background='var(--blue-bg)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg2)'">
     <div style="font-size:14px;font-weight:500;color:var(--text)">${o.label}</div>
     <div style="font-size:12px;color:var(--text2);margin-top:2px">${o.desc}</div>
   </button>`).join('');
@@ -1704,8 +1720,8 @@ function renderWizardStep(){
     <p style="font-size:13px;color:var(--text2);margin-bottom:20px">${step.desc}</p>
     ${opts}
     <div style="display:flex;justify-content:space-between;margin-top:8px">
-      ${wizardStep>0?`<button class="btn btn-sm" onclick="wizardBack()">← Zurück</button>`:'<span></span>'}
-      <button class="btn btn-sm" onclick="wizardSkip()" style="color:var(--text3)">Überspringen</button>
+      ${wizardStep>0?`<button type="button" class="btn btn-sm" onclick="wizardBack()">← Zurück</button>`:'<span></span>'}
+      <button type="button" class="btn btn-sm" onclick="wizardSkip()" style="color:var(--text3)">Überspringen</button>
     </div>`;
 }
 function wizardChoose(i){WIZARD_STEPS[wizardStep].options[i].action();wizardStep++;renderWizardStep();}
@@ -1719,8 +1735,8 @@ function showWizardSuggestion(){
   banner.style.cssText='background:var(--blue-bg);border:0.5px solid var(--blue);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;font-size:13px;';
   banner.innerHTML=`<span style="font-size:20px">⚙</span>
     <div style="flex:1"><strong>Tool einrichten?</strong> Der Setup-Wizard konfiguriert in 4 Schritten welche Module du brauchst.</div>
-    <button class="btn btn-sm" onclick="openWizard();document.getElementById('wizardBanner')?.remove()" style="background:var(--blue);color:#fff;border-color:var(--blue)">Wizard starten</button>
-    <button class="del-btn" onclick="document.getElementById('wizardBanner')?.remove()" style="font-size:18px">✕</button>`;
+    <button type="button" class="btn btn-sm" onclick="openWizard();document.getElementById('wizardBanner')?.remove()" style="background:var(--blue);color:#fff;border-color:var(--blue)">Wizard starten</button>
+    <button type="button" class="del-btn" onclick="document.getElementById('wizardBanner')?.remove()" style="font-size:18px">✕</button>`;
   const tabs=document.querySelector('.tabs');
   if(tabs)tabs.insertAdjacentElement('afterend',banner);
 }
