@@ -44,7 +44,7 @@ Module toggles (see State), KPI toggles, setup wizard, reset.
 
 ## Interactions & Behavior
 - **Sprint lifecycle:** `open` (Offen) → `running` (Aktiv, badge „● Aktiv" green) → `ended` (badge „✓ Sprint beendet"). Ending asks confirmation and upserts `{sprint: nr, sp: completedSP}` into velocity history. Ended sprints can be reopened.
-- **+ Nächster Sprint:** saves current, creates sprint nr+1 starting the Monday after current end, 14 days long, carries over unit/meeting hours.
+- **+ Nächster Sprint:** saves current, creates sprint nr+1 starting on the current sprint's end date with the same length in days (default 13 days if no start), carries over unit/meeting hours.
 - **Delete sprint:** confirm („Endgültig löschen"); not allowed when only one sprint exists.
 - **Live recalculation** on every input change (`recalc()`), debounced autosave to localStorage (400ms).
 - **Save indicator** states: saved / exported / error; „unexported changes" flag cleared after JSON export.
@@ -58,6 +58,7 @@ Module toggles (see State), KPI toggles, setup wizard, reset.
 - Net = max(0, actual − meeting deduction) × focus%. In „days" unit: net ÷ daily rate.
 - **Commitment recommendation** (hero of the Story Points section, `commitmentRecommendation(avgVel)`): capacity ratio = Σ available gross hours (after holidays and absences) ÷ Σ gross hours of a full sprint of the same length (member workdays only, no holidays, no absences). Target = Ø velocity of the last 3 sprints × ratio; the range shown is round(target × 0.9)–round(target). States: no velocity history or velocity module off → shows the capacity % only; no workdays/members → error text; the planned value is rated "im Bereich" (green), "über" (amber) or "unter" (neutral, framed as buffer) and drawn as a marker on the range scale.
 - **Velocity forecast (Monte Carlo)** (`velocityForecast(history, ratio, planned)`, inside the commitment card): 10,000 runs; each run draws one of the last 6 sprints' SP (SP > 0) at random and scales it by this sprint's capacity ratio. Shows the probability of reaching the planned SP and the SP reached with 50 / 85 / 95 % certainty, plus a histogram (bars ≥ plan in brand color). Seeded PRNG (from the history and the ratio) so numbers stay stable across re-renders. Needs ≥ 3 sprints of history; hidden when the velocity module is off. With a one-sprint horizon it reproduces the spread of the sampled sprints, so probabilities move in steps of about 1/n.
+- **Backlog forecast (Monte Carlo)** (Velocity tab, `backlogForecast(history, backlog, firstRatio)` + `forecastSprintEnd(k)`): 10,000 runs; each run draws past sprints' SP (last 6, SP > 0) until the remaining backlog is done. The first simulated sprint is the current one, scaled by its capacity ratio; later sprints assume full capacity. Sprint end dates follow „+ Nächster Sprint" (start on the previous end, same length). Shows sprints/dates for 50 / 85 / 95 % certainty, the probability of finishing by an optional target date, and a cumulative bar chart per sprint (bars ≥ 85 % in brand color, dashed 85 % line, target sprint outlined). States: < 3 sprints of history, no backlog entered, > 52 sprints (error).
 - Holidays: Austrian public holidays computed per year (Easter-based movable feasts included) — `getAustrianHolidays(year)`.
 
 ## State Management
@@ -70,6 +71,7 @@ state = {
               status:'open'|'running'|'ended' }],
   members: [{ id, name, role, focus, workDays:[1..5], weeklyHours, meetingHours|null }],
   roles: [string], velocity: [{ sprint, sp, adjustedSp }],
+  backlog: { sp, target:'YYYY-MM-DD'|'' },   // Backlog-Prognose inputs
   kpis: { goal, commit },
   modules: { storyPoints, velocity, adjustedVelocity, sprintGoals, absences, capacity, notes, planningSheet }
 }
