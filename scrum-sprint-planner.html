@@ -294,10 +294,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .fc-statement[data-tone="over"] b:last-child{color:var(--amber);}
 .commit-forecast[data-state="empty"] .fc-statement{color:var(--text2);margin-bottom:0;}
 .fc-body{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px 28px;align-items:end;}
-.fc-hist{position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:2px;height:56px;padding-bottom:16px;}
-.fc-hist>span{flex:1 1 0;max-width:10px;min-width:3px;border-radius:2px 2px 0 0;background:var(--bg3);}
-.fc-hist>span.is-hit{background:var(--brand);}
-.fc-axis{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;font-style:normal;font-size:10px;color:var(--text3);font-variant-numeric:tabular-nums;}
+.fc-hist{display:flex;align-items:stretch;justify-content:space-around;gap:6px;height:92px;}
+.fc-col{flex:1 1 0;max-width:56px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;}
+.fc-bar{width:100%;max-width:28px;border-radius:3px 3px 0 0;background:var(--bg3);}
+.fc-col.is-hit .fc-bar{background:var(--brand);}
+.fc-share{font-size:10px;color:var(--text3);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.fc-sp{font-size:11px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums;}
+.fc-col.is-hit .fc-sp{color:var(--text);}
 .fc-levels{display:flex;gap:20px;margin:0;}
 .fc-levels dt{font-size:11px;color:var(--text2);}
 .fc-levels dd{margin:2px 0 0;font-size:17px;font-weight:650;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;}
@@ -330,8 +333,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:560px){.bl-body{grid-template-columns:1fr;}}
 :root[data-contrast="high"] .bl-chart>span{background:#bbb;}
 :root[data-contrast="high"] .bl-chart>span.is-safe{background:#000;}
-:root[data-contrast="high"] .fc-hist>span{background:#bbb;}
-:root[data-contrast="high"] .fc-hist>span.is-hit{background:#000;}
+:root[data-contrast="high"] .fc-bar{background:#bbb;}
+:root[data-contrast="high"] .fc-col.is-hit .fc-bar{background:#000;}
 :root[data-contrast="high"] .commit-value{color:#000;}
 :root[data-contrast="high"] .commit-band{background:#000;opacity:.35;}
 :root[data-contrast="high"] .commit-scale{background:#fff;box-shadow:inset 0 0 0 1px #000;}
@@ -1363,13 +1366,19 @@ function renderForecast(ratio,planned){
   }
   $('fcLevels').innerHTML=[[.5,f.p50],[.85,f.p85],[.95,f.p95]]
     .map(([p,v])=>`<div><dt>${pct(p)} sicher</dt><dd>≥ ${v} SP</dd></div>`).join('');
-  // Histogram: one bar per whole SP; bars at or above the plan carry the brand color
-  const lo=Math.floor(f.outcomes[0]),hi=Math.floor(f.outcomes[f.runs-1]);
-  const bins=new Array(hi-lo+1).fill(0);
-  f.outcomes.forEach(o=>bins[Math.floor(o+1e-9)-lo]++);
-  const max=Math.max(...bins);
-  $('fcHist').innerHTML=bins.map((c,i)=>`<span class="${planned>0&&lo+i>=planned?'is-hit':''}" style="height:${c?Math.max(6,c/max*100):0}%"></span>`).join('')+
-    `<em class="fc-axis"><span>${lo} SP</span><span>${hi} SP</span></em>`;
+  // Histogram: one column per possible outcome (whole SP), share of runs on top, SP below.
+  // Columns at or above the plan carry the brand color.
+  const counts=new Map();
+  f.outcomes.forEach(o=>{const k=Math.floor(o+1e-9);counts.set(k,(counts.get(k)||0)+1);});
+  const keys=[...counts.keys()].sort((a,b)=>a-b);
+  const maxC=Math.max(...counts.values());
+  $('fcHist').innerHTML=keys.map(k=>{
+    const c=counts.get(k);
+    const hit=planned>0&&k>=planned;
+    return `<div class="fc-col${hit?' is-hit':''}"><span class="fc-share">${Math.round(c/f.runs*100)} %</span>`+
+      `<span class="fc-bar" style="height:${Math.max(8,c/maxC*100)}%"></span><span class="fc-sp">${k}</span></div>`;
+  }).join('');
+
 }
 function onBacklogInput(){
   state.backlog={sp:Math.max(0,Number(document.getElementById('backlogSP').value)||0),target:document.getElementById('backlogTarget').value||''};
@@ -1757,76 +1766,68 @@ function renderVelocityChart(){
   const avg=avgVelocity(3);
   const adjAvg=avgAdjustedVelocity(3);
 
-  // Layout constants
-  const W=580, H=190;
-  const padL=20, padR=20;          // horizontal padding
-  const padTop=30;                  // space for legend
-  const padBottom=28;               // space for x-axis labels
-  const plotH=H-padTop-padBottom;   // actual plotting height
-  const baseY=H-padBottom;          // y-coordinate of value 0
-
-  // Scale: add 15% headroom above the max so labels/diamonds never clip
+  // Layout: the plot leaves a right gutter for the average labels so they never sit on bars
+  const W=580, H=200;
+  const padL=12, padR=74;           // padR = gutter for "Ø3 …" labels
+  const padTop=40;                  // legend + room for the tallest value label
+  const padBottom=28;               // x-axis labels
+  const plotH=H-padTop-padBottom;
+  const baseY=H-padBottom;
   const allNums=[...vals,...adjVals.filter(x=>x!==null)];
-  const rawMax=Math.max(...allNums,1);
-  const mx=rawMax*1.15;
-
+  const mx=Math.max(...allNums,1)*1.08;
   const n=vals.length;
-  const barW=Math.max(10,Math.min(48,Math.floor((W-padL-padR)/n*0.6)));
   const slot=(W-padL-padR)/n;
+  const barW=Math.max(10,Math.min(48,Math.floor(slot*0.6)));
   const xCenter=i=>padL+slot*i+slot/2;
   const toY=v=>baseY-(v/mx)*plotH;
+  // Numbers get a halo in the card color, so a line passing behind never cuts through them
+  const halo='paint-order:stroke;stroke:var(--bg);stroke-width:4px;stroke-linejoin:round';
+  const num=(x,y,txt,anchor,size,color,weight='500')=>`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" font-size="${size}" font-weight="${weight}" style="fill:${color};${halo};font-variant-numeric:tabular-nums">${txt}</text>`;
 
+  // 1. Average lines first, so bars and numbers sit on top; labels in the right gutter
+  let lines='';
+  const avgMarks=[];
+  if(avg>0)avgMarks.push({y:toY(avg),txt:`Ø3 ${avg}`,color:'var(--text2)'});
+  if(adjAvg!==null&&adjAvg>0)avgMarks.push({y:toY(adjAvg),txt:`Adj. Ø3 ${adjAvg}`,color:'var(--text)'});
+  // keep the two gutter labels at least 12px apart
+  if(avgMarks.length===2&&Math.abs(avgMarks[0].y-avgMarks[1].y)<12){
+    const [hi,lo]=avgMarks[0].y<avgMarks[1].y?[avgMarks[0],avgMarks[1]]:[avgMarks[1],avgMarks[0]];
+    const mid=(hi.y+lo.y)/2;hi.ly=mid-6;lo.ly=mid+6;
+  }
+  avgMarks.forEach(m=>{
+    lines+=`<line x1="${padL}" y1="${m.y.toFixed(1)}" x2="${W-padR+2}" y2="${m.y.toFixed(1)}" style="stroke:${m.color}" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>`;
+    lines+=num(W-padR+6,(m.ly??m.y)+3,m.txt,'start',10,m.color,'600');
+  });
+
+  // 2. Bars, value labels above, adjusted diamond with its value to the right
   let bars='';
   vals.forEach((v,i)=>{
     const cx=xCenter(i);
-    const x=cx-barW/2;
     const y=toY(v);
     const h=Math.max(2,baseY-y);
-    bars+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW}" height="${h.toFixed(1)}" rx="3" style="fill:color-mix(in srgb,var(--brand) 35%,transparent)"/>`;
-    // value label above bar (only if no adjusted diamond would overlap)
+    bars+=`<rect x="${(cx-barW/2).toFixed(1)}" y="${y.toFixed(1)}" width="${barW}" height="${h.toFixed(1)}" rx="3" style="fill:color-mix(in srgb,var(--brand) 35%,transparent)"><title>${labels[i]}: ${v} SP</title></rect>`;
     const adj=adjVals[i];
-    const showBarLabelAbove=(adj===null||Math.abs(toY(adj)-y)>16);
-    if(showBarLabelAbove){
-      bars+=`<text x="${cx.toFixed(1)}" y="${(y-6).toFixed(1)}" text-anchor="middle" font-size="11" style="fill:var(--text2)">${v}</text>`;
-    }else{
-      // put velocity label inside the bar near top
-      bars+=`<text x="${cx.toFixed(1)}" y="${(y+13).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)">${v}</text>`;
-    }
-    // x-axis label
-    bars+=`<text x="${cx.toFixed(1)}" y="${(H-10).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text3)">${labels[i]}</text>`;
-    // Adjusted diamond
+    const r=5.5;
+    const ay=adj!==null?toY(adj):null;
+    // velocity value sits above whichever is higher: the bar top or the diamond
+    const top=adj!==null?Math.min(y,ay-r):y;
+    bars+=num(cx,top-6,v,'middle',11,'var(--text2)');
     if(adj!==null){
-      const ay=toY(adj);
-      const r=6;
-      bars+=`<polygon points="${cx},${(ay-r).toFixed(1)} ${(cx+r).toFixed(1)},${ay.toFixed(1)} ${cx},${(ay+r).toFixed(1)} ${(cx-r).toFixed(1)},${ay.toFixed(1)}" style="fill:var(--text)" opacity="0.92"/>
-      <text x="${cx.toFixed(1)}" y="${(ay-r-3).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text)" font-weight="600">${adj}</text>`;
+      bars+=`<polygon points="${cx},${(ay-r).toFixed(1)} ${(cx+r).toFixed(1)},${ay.toFixed(1)} ${cx},${(ay+r).toFixed(1)} ${(cx-r).toFixed(1)},${ay.toFixed(1)}" style="fill:var(--text);stroke:var(--bg);stroke-width:1.5"><title>${labels[i]}: Adjusted ${adj} SP</title></polygon>`;
+      bars+=num(cx+r+4,ay+3.5,adj,'start',10,'var(--text)','600');
     }
+    bars+=`<text x="${cx.toFixed(1)}" y="${(H-10).toFixed(1)}" text-anchor="middle" font-size="10" style="fill:var(--text3)">${labels[i]}</text>`;
   });
-
-  // Average lines
-  let lines='';
-  if(avg>0){
-    const avgY=toY(avg);
-    lines+=`<line x1="${padL}" y1="${avgY.toFixed(1)}" x2="${W-padR}" y2="${avgY.toFixed(1)}" style="stroke:var(--text2)" stroke-width="1" stroke-dasharray="4,3" opacity="0.65"/>
-    <text x="${(W-padR-2).toFixed(1)}" y="${(avgY-4).toFixed(1)}" text-anchor="end" font-size="9" style="fill:var(--text2)">Ø3 ${avg}</text>`;
-  }
-  if(adjAvg!==null&&adjAvg>0){
-    const adjAvgY=toY(adjAvg);
-    // avoid label collision with the red line
-    const collides=avg>0&&Math.abs(toY(avg)-adjAvgY)<12;
-    lines+=`<line x1="${padL}" y1="${adjAvgY.toFixed(1)}" x2="${W-padR}" y2="${adjAvgY.toFixed(1)}" style="stroke:var(--text)" stroke-width="1" stroke-dasharray="4,3" opacity="0.65"/>
-    <text x="${(padL+2).toFixed(1)}" y="${(adjAvgY+(collides?12:-4)).toFixed(1)}" text-anchor="start" font-size="9" style="fill:var(--text)">Adj. Ø3 ${adjAvg}</text>`;
-  }
 
   // Legend (top-left)
   let legend=`<rect x="${padL}" y="6" width="11" height="11" rx="2" style="fill:color-mix(in srgb,var(--brand) 35%,transparent)"/>
   <text x="${padL+16}" y="15" font-size="10" style="fill:var(--text2)">Velocity</text>`;
   if(hasAdj){
-    legend+=`<polygon points="${padL+82},6 ${padL+88},12 ${padL+82},18 ${padL+76},12" style="fill:var(--text)" opacity="0.92"/>
+    legend+=`<polygon points="${padL+82},6 ${padL+88},12 ${padL+82},18 ${padL+76},12" style="fill:var(--text)"/>
     <text x="${padL+94}" y="15" font-size="10" style="fill:var(--text)">Adjusted SP</text>`;
   }
 
-  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;max-height:220px">${legend}${bars}${lines}</svg>`;
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Velocity je Sprint: ${labels.map((l,i)=>`${l} ${vals[i]} SP`).join(', ')}${avg>0?`; Ø3 ${avg} SP`:''}" style="display:block;max-height:240px">${legend}${lines}${bars}</svg>`;
 }
 
 // ─── Sprint Goals ─────────────────────────────────────────────────────────────
