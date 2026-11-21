@@ -21,7 +21,7 @@ const source = [
 function loadCalc(state) {
   const ctx = vm.createContext({ state });
   vm.runInContext(
-    `${source}\n;this.api={getAustrianHolidays,HOLIDAYS,isHoliday,isWorkday,getSprintDays,getSprintWorkdays,memberDailyRate,memberMeetingHours,memberTheoreticalMaxHours,memberTheoreticalMax,memberSprintCapacity,teamTotalCapacity,memberAvailableHours,memberBaselineHours,memberAbsenceDays,commitmentRecommendation,velocityForecast};`,
+    `${source}\n;this.api={getAustrianHolidays,HOLIDAYS,isHoliday,isWorkday,getSprintDays,getSprintWorkdays,memberDailyRate,memberMeetingHours,memberTheoreticalMaxHours,memberTheoreticalMax,memberSprintCapacity,teamTotalCapacity,memberAvailableHours,memberBaselineHours,memberAbsenceDays,commitmentRecommendation,velocityForecast,backlogForecast,forecastSprintEnd};`,
     ctx,
   );
   return ctx.api;
