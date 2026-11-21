@@ -25,7 +25,7 @@ Single page, max-width 980px, padding 24px 20px. Top bar + 4 tabs.
 4. Sprint-Ziele: checklist of goals (add/edit/check/delete), `done/total erreicht (pct%)`.
 5. „Sprint KPIs" header + metric cards (team capacity, workdays, etc.). Arbeitstage card contains Start/Ende date inputs; Team-Kapazität card contains Einheit selector (Stunden/Personentage).
 6. Capacity detail per member: avatar (pastel from palette), bar colored by utilization (≥70 green, ≥40 amber, else red).
-7. Abwesenheiten pro Mitglied: accordion per member; day grid cells click-cycle available → half → absent; holidays fixed (blue), weekends muted. Legend chips above.
+7. Abwesenheiten: one team × days table (`renderMemberAbsences`). Rows = members (sticky name column), columns = sprint days with a divider before each Monday; last column "Tage" = available / possible workdays; footer "Anwesend" = people present per day (amber below half the team). Click cycles available → half (½) → absent (✕); mouse/pen drag along a row paints that state across every day passed; touch only taps (so scrolling never edits); arrow keys move focus (roving tabindex), Enter/Space cycle. Holidays (blue, name in header), weekends (muted) and a member's non-working days (hatched) are not editable. On narrow screens the table scrolls inside its own container with a right edge shadow. Legend chips above.
 
 ### Tab „Team"
 Member list (name, role, focus %, weekly hours, workdays Mo–So checkboxes, optional per-member meeting hours overriding sprint default), **Meetings** default hours per sprint, roles list (add/rename/delete).
