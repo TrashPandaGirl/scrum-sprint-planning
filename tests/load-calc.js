@@ -15,13 +15,13 @@ function slice(from, to) {
 
 const source = [
   slice('function getAustrianHolidays', 'Object.assign(HOLIDAYS,getAustrianHolidays(y));'),
-  slice('function curSprint()', 'function teamTotalCapacity(){return state.members.reduce((s,m)=>s+memberSprintCapacity(m),0);}'),
+  slice('function curSprint()', '// ─── Sprint navigation'),
 ].join('\n');
 
 function loadCalc(state) {
   const ctx = vm.createContext({ state });
   vm.runInContext(
-    `${source}\n;this.api={getAustrianHolidays,HOLIDAYS,isHoliday,isWorkday,getSprintDays,getSprintWorkdays,memberDailyRate,memberMeetingHours,memberTheoreticalMaxHours,memberTheoreticalMax,memberSprintCapacity,teamTotalCapacity};`,
+    `${source}\n;this.api={getAustrianHolidays,HOLIDAYS,isHoliday,isWorkday,getSprintDays,getSprintWorkdays,memberDailyRate,memberMeetingHours,memberTheoreticalMaxHours,memberTheoreticalMax,memberSprintCapacity,teamTotalCapacity,memberAvailableHours,memberBaselineHours,memberAbsenceDays,commitmentRecommendation};`,
     ctx,
   );
   return ctx.api;

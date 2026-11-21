@@ -56,6 +56,7 @@ Module toggles (see State), KPI toggles, setup wizard, reset.
 - Actual (brutto) = same, minus absences (half day = 0.5).
 - Meeting deduction = meetingHours × (actual ÷ theoretical max), i.e. meetings shrink proportionally with absence.
 - Net = max(0, actual − meeting deduction) × focus%. In „days" unit: net ÷ daily rate.
+- **Commitment recommendation** (hero of the Story Points section, `commitmentRecommendation(avgVel)`): capacity ratio = Σ available gross hours (after holidays and absences) ÷ Σ gross hours of a full sprint of the same length (member workdays only, no holidays, no absences). Target = Ø velocity of the last 3 sprints × ratio; the range shown is round(target × 0.9)–round(target). States: no velocity history or velocity module off → shows the capacity % only; no workdays/members → error text; the planned value is rated "im Bereich" (green), "über" (amber) or "unter" (neutral, framed as buffer) and drawn as a marker on the range scale.
 - Holidays: Austrian public holidays computed per year (Easter-based movable feasts included) — `getAustrianHolidays(year)`.
 
 ## State Management
