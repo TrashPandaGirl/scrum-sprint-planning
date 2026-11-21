@@ -102,6 +102,8 @@ CSS custom properties on `:root`; theme via `data-theme="light|dark"` (absent = 
 
 Keyboard focus: a global `:focus-visible` ring (2px `--blue`, offset 2px); do not add inline `outline:none`. All `<button>`s have `type="button"`.
 
+Color system (added in the redesign): `--page` is the page background and `--bg` the white card surface (light `#eef4f6`/`#ffffff`, dark `#131312`/`#1e1e1c`); `--brand` (`#00788d` light, `#2fb6cb` dark) drives primary buttons, active tab, focus borders and the 4px top stripe; accent hues `--acc-blue/teal/violet/amber/coral/green` tint the KPI cards (top border 3px + 11% background) and the section-label markers (Story Points violet, Sprint-Ziele green, Abwesenheiten amber, Team-Kapazität teal, KPIs blue). Cards: 1px border + soft shadow. Top bar: team name + save status + theme/contrast toggles in row 1; sprint controls in row 2; Speichern, copy, Laden, Planning Sheet and Sprint löschen in row 3.
+
 High contrast also: 2px solid black borders on cards/inputs/buttons/tabs, body weight 500, active tab black/white.
 
 Day cells (always light bg, dark text): available `#EAF3DE`/border `#97C459`/text `#3B6D11`; half `#FAEEDA`/`#EF9F27`/`#854F0B`; absent `#FCEBEB`/`#F09595`/`#A32D2D`; holiday `--blue-bg`/`--blue`.
