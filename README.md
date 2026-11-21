@@ -15,8 +15,9 @@ UI copy must stay German.
 Single page, max-width 980px, padding 24px 20px. Top bar + 4 tabs.
 
 ### Top bar
-- Row 1: editable team name (22px/500, borderless, bottom border `--border2`, focus `--blue`), theme toggle (half-circle/sun/moon icon cycles System→Hell→Dunkel), contrast toggle (◑), sprint navigation (‹ Sprint N ›), sprint status badge, **▶ Sprint starten** button, **+ Nächster Sprint** (bg `#006274`, text `#eefcff`), **↑ Laden ▾** menu (Datei / Zwischenablage, last-file hint), save indicator.
-- Row 2: **↓ Speichern** (primary, JSON download), clipboard-icon copy button, trash-icon delete sprint (right-aligned, red-framed, 12px/600).
+- Row 1: editable team name (22px/600, borderless, bottom border `--border2`), save indicator, and on the right the theme toggle (half-circle/sun/moon icon cycles System→Hell→Dunkel) and contrast toggle (◑).
+- Row 2: sprint navigation (‹ Sprint N › on `--bg2`), **▶ Sprint starten** / **⏹ Sprint beenden**, status badge, **+ Nächster Sprint** — the only filled button in the bar (`.btn-primary`, `--brand`).
+- Row 3: **↓ Speichern** (JSON download), clipboard-icon copy button, **↑ Laden ▾** menu (Datei / Zwischenablage, last-file hint), Planning Sheet, and right-aligned **Sprint löschen** (`.btn-delete`, red-framed, 12px/600). All secondary (outlined).
 
 ### Tab „Sprint"
 1. Section „Nächste Sprint-Kapazitäten": grid (`repeat(auto-fit,minmax(130px,1fr))`, gap 10px) of `.sprint-info` cards (bg `--surface`, radius 8px, padding 12px 14px). Cards: Sprint Nr., Notizen (span 2, textarea min-height 60px, vertical resize).
