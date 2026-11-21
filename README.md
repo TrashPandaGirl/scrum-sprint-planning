@@ -15,8 +15,8 @@ UI copy must stay German.
 Single page, max-width 980px, padding 24px 20px. Top bar + 4 tabs.
 
 ### Top bar
-- Row 1: editable team name (22px/500, borderless, bottom border `--border2`, focus `--blue`), theme toggle (🌓/☀️/🌙 cycles System→Hell→Dunkel), contrast toggle (◑), sprint navigation (‹ Sprint N ›), sprint status badge, **▶ Sprint starten** button, **+ Nächster Sprint** (bg `#006274`, text `#eefcff`), **↑ Laden ▾** menu (Datei / Zwischenablage, last-file hint), save indicator.
-- Row 2: **↓ Speichern** (primary, JSON download), 📋 copy-to-clipboard, 🗑 delete sprint (right-aligned, red-framed, 12px/600).
+- Row 1: editable team name (22px/500, borderless, bottom border `--border2`, focus `--blue`), theme toggle (half-circle/sun/moon icon cycles System→Hell→Dunkel), contrast toggle (◑), sprint navigation (‹ Sprint N ›), sprint status badge, **▶ Sprint starten** button, **+ Nächster Sprint** (bg `#006274`, text `#eefcff`), **↑ Laden ▾** menu (Datei / Zwischenablage, last-file hint), save indicator.
+- Row 2: **↓ Speichern** (primary, JSON download), clipboard-icon copy button, trash-icon delete sprint (right-aligned, red-framed, 12px/600).
 
 ### Tab „Sprint"
 1. Section „Nächste Sprint-Kapazitäten": grid (`repeat(auto-fit,minmax(130px,1fr))`, gap 10px) of `.sprint-info` cards (bg `--surface`, radius 8px, padding 12px 14px). Cards: Sprint Nr., Notizen (span 2, textarea min-height 60px, vertical resize).
@@ -100,6 +100,8 @@ CSS custom properties on `:root`; theme via `data-theme="light|dark"` (absent = 
 | --blue | #378ADD | = | #004a99 |
 | --blue-bg | #E6F1FB | #0c2a45 | #dceaff |
 
+Keyboard focus: a global `:focus-visible` ring (2px `--blue`, offset 2px); do not add inline `outline:none`. All `<button>`s have `type="button"`.
+
 High contrast also: 2px solid black borders on cards/inputs/buttons/tabs, body weight 500, active tab black/white.
 
 Day cells (always light bg, dark text): available `#EAF3DE`/border `#97C459`/text `#3B6D11`; half `#FAEEDA`/`#EF9F27`/`#854F0B`; absent `#FCEBEB`/`#F09595`/`#A32D2D`; holiday `--blue-bg`/`--blue`.
@@ -112,7 +114,7 @@ Avatar palette: `#9FE1CB #B5D4F4 #F4C0D1 #FAC775 #CED0F6 #C0DD97 #F5C4B3`.
 - Spacing: grid gaps 10px; section gaps ~20px.
 
 ## Assets
-No images. Icons are Unicode glyphs/emoji (🌓 ☀️ 🌙 ◑ 📋 🗑 ▶ ✓ ✕ ℹ). External libs via CDN: html2canvas 1.4.1, jsPDF 2.5.1 (PDF planning sheet).
+No images. UI icons (theme, clipboard, trash, folder, gear, close) are inline SVG symbols from a sprite at the top of `<body>` (stroke `currentColor`, class `.ico`, `aria-hidden`; icon-only buttons carry an `aria-label`). Remaining glyphs are plain Unicode (◑ ▶ ✓ × ‹ ›); decorative emoji only appear inside German copy (wizard options, toasts). External libs via CDN: html2canvas 1.4.1, jsPDF 2.5.1 (PDF planning sheet).
 
 ## Files
 - `scrum-sprint-planner.html` — complete source (CSS in `<style>`, markup, JS in `<script>`). Key functions: `getAustrianHolidays`, `memberSprintCapacity`, `teamTotalCapacity`, `recalc`, `toggleSprintStarted`, `confirmEndSprint`, `syncSprintToVelocity`, `newSprint`, `deleteSprint`, `applyModules`, `renderVelocityChart`, `exportFile`/`handleImport`, `saveToLocal`/`loadFromLocal`.
