@@ -35,6 +35,12 @@ Member list (name, role, focus %, weekly hours, workdays Mo–So checkboxes, opt
 Metrics: Ø 3 Sprints, Ø 5 Sprints (with adjusted Ø), Höchstwert, Trend. Inline SVG chart: bars per sprint, dashed red Ø3 line, adjusted-SP diamonds. Editable history table (sprint label, SP, adjusted SP); auto-sorted numerically when all labels contain numbers. Starts empty.
 
 ### Tab „Einstellungen"
+**Darstellung** (first section, saved per device in `localStorage` key `sprintplanner-palette`, mode in `sprintplanner-theme`):
+- **Modus:** System / Hell / Dunkel (same setting as the top-bar toggle).
+- **Farbschema:** 12 presets from the Wiener Stadtwerke design system (websafe / CI / light): Wien IT (default, = the stylesheet's own palette), Wiener Stadtwerke, Wien Energie, Wiener Netze, Wiener Linien, Wiener Lokalbahnen, WIPARK, Bestattung Wien, Friedhöfe Wien, GWSG, immOH!, BF Wien. Not included on purpose: Bestattungsmuseum, EPOSA, Service Treff, Nextbox.
+- **Eigene Farben:** Akzentfarbe + Hintergrund-Ton (color pickers).
+- Tokens are derived by `derivePalette()` and written into one `<style id="paletteVars">`: `--brand` = accent (darkened to 4.5:1 on white if needed), `--text`/`--accent-label` = accent darkened to 7:1, `--text2/3`, borders, `--bg2/--bg3/--surface` tinted from the accent, `--page` from the background tint. Dark mode: lighter variant from the CI color at ≥ 4.5:1 on `#1e1e1c`. High contrast and the status colors (green/amber/red, day cells) are never changed.
+
 Module toggles (see State), KPI toggles, setup wizard, reset.
 
 ### Overlays

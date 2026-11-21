@@ -407,6 +407,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .modal-title.flush{margin:0;font-weight:500;}
 .confirm-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:120;align-items:center;justify-content:center;}
 .modal-box.narrow{max-width:420px;}
+.ap-card{display:flex;flex-direction:column;gap:18px;}
+.ap-seg{display:inline-flex;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden;}
+.ap-seg button{padding:7px 16px;font:inherit;font-size:13px;background:var(--bg);color:var(--text2);border:0;cursor:pointer;transition:background .15s;}
+.ap-seg button+button{border-left:1px solid var(--border2);}
+.ap-seg button:hover:not([aria-checked="true"]){background:var(--bg2);color:var(--text);}
+.ap-seg button[aria-checked="true"]{background:var(--brand);color:var(--on-brand);font-weight:600;}
+.ap-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;}
+.ap-preset{display:flex;align-items:center;gap:12px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);font:inherit;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+.ap-preset:hover{border-color:var(--text2);}
+.ap-preset:active{transform:scale(.98);}
+.ap-preset[aria-checked="true"]{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand);font-weight:600;}
+.ap-swatch{width:22px;height:22px;border-radius:50%;flex:none;background:var(--sw);box-shadow:0 0 0 3px var(--tint),0 0 0 4px var(--border2);margin:4px;}
+.ap-swatch.is-custom{background:conic-gradient(from 90deg,var(--sw) 0 50%,var(--tint) 0);}
+.ap-custom{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;padding-top:14px;border-top:1px solid var(--border);}
+.ap-custom[hidden]{display:none;}
+.ap-color{display:inline-flex;align-items:center;gap:10px;font-size:13px;color:var(--text);cursor:pointer;}
+.ap-color input[type=color]{width:44px;height:32px;padding:2px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--field);cursor:pointer;}
+.ap-color input[type=color]:hover{border-color:var(--text2);}
+.ap-note{flex:1 0 100%;margin:0;font-size:12px;color:var(--text2);}
+.ap-note:empty{display:none;}
+.ap-note[data-tone="warn"]{color:var(--amber);}
+#section-appearance[data-hc="1"] .ap-presets,#section-appearance[data-hc="1"] .ap-custom .ap-color{opacity:.5;}
 .wizard-option{display:block;width:100%;text-align:left;padding:12px 16px;margin-bottom:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-family:inherit;color:var(--text);transition:border-color .15s,background .15s;}
 .wizard-option:hover{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 10%,var(--bg));}
 @media(max-width:560px){
@@ -640,6 +662,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
   <!-- SETTINGS TAB -->
   <div id="tab-settings" style="display:none">
+    <div class="section" id="section-appearance">
+      <div class="section-header"><span class="section-label">Darstellung</span></div>
+      <div class="card ap-card">
+        <div class="ap-block">
+          <span class="field-label" id="apModeLabel">Modus</span>
+          <div class="ap-seg" role="radiogroup" aria-labelledby="apModeLabel" id="apMode"></div>
+        </div>
+        <div class="ap-block">
+          <span class="field-label" id="apSchemeLabel">Farbschema</span>
+          <div class="ap-presets" role="radiogroup" aria-labelledby="apSchemeLabel" id="apPresets"></div>
+        </div>
+        <div class="ap-block ap-custom" id="apCustom">
+          <label class="ap-color"><input type="color" id="apAccent" oninput="onCustomColor()"><span>Akzentfarbe</span></label>
+          <label class="ap-color"><input type="color" id="apTint" oninput="onCustomColor()"><span>Hintergrund-Ton</span></label>
+          <p class="ap-note" id="apNote" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
     <div class="section">
       <div class="section-header">
         <span class="section-label">Module</span>
@@ -786,7 +826,10 @@ let nextId=10;
 let nextGoalId=1;
 
 // ─── Theme (light / dark / system) ────────────────────────────────────────────
-function getStoredTheme(){return localStorage.getItem('sprintplanner-theme')||'system';}
+// Storage can be unavailable (private mode, data: URLs); preferences then just don't persist.
+function prefGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function prefSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function getStoredTheme(){return prefGet('sprintplanner-theme')||'system';}
 function applyTheme(theme){
   const root=document.documentElement;
   if(theme==='light')root.setAttribute('data-theme','light');
@@ -804,11 +847,51 @@ function cycleTheme(){
   const order=['system','light','dark'];
   const cur=getStoredTheme();
   const next=order[(order.indexOf(cur)+1)%order.length];
-  localStorage.setItem('sprintplanner-theme',next);
-  applyTheme(next);
+  setThemeMode(next);
+}
+function setThemeMode(mode){
+  prefSet('sprintplanner-theme',mode);
+  applyTheme(mode);
+  if(typeof renderAppearance==='function')renderAppearance();
 }
 // Apply stored theme immediately to avoid flash
 applyTheme(getStoredTheme());
+
+// ─── Color scheme: preset or own accent + background tint (per device) ──────
+const PALETTE_KEY='sprintplanner-palette';
+function getPaletteChoice(){try{return JSON.parse(prefGet(PALETTE_KEY))||{id:'wienit'};}catch(e){return{id:'wienit'};}}
+function paletteColors(c){
+  if(c.id==='custom')return{accent:c.accent,ci:c.accent,tint:c.tint};
+  const p=PALETTES.find(x=>x.id===c.id)||PALETTES[0];
+  return{accent:p.websafe,ci:p.ci,tint:p.light};
+}
+// Writes the derived tokens into one <style>. Wien IT is the stylesheet's own palette, so it needs none.
+// Selectors are ordered so dark mode keeps its neutrals and high contrast stays untouched.
+function applyPalette(c){
+  let el=document.getElementById('paletteVars');
+  if(c.id==='wienit'){if(el)el.remove();return;}
+  const t=derivePalette(paletteColors(c));
+  const decl=o=>Object.entries(o).map(([k,v])=>`${k}:${v}`).join(';');
+  if(!el){el=document.createElement('style');el.id='paletteVars';document.head.appendChild(el);}
+  el.textContent=`:where(:root):not([data-contrast="high"]){${decl(t.light)}}
+:root[data-theme="dark"]:not([data-contrast="high"]){${decl(t.dark)}}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]):not([data-theme="dark"]):not([data-contrast="high"]){${decl(t.dark)}}}`;
+}
+function choosePalette(id){
+  const cur=getPaletteChoice();
+  const c=id==='custom'
+    ?{id:'custom',accent:cur.id==='custom'?cur.accent:paletteColors(cur).accent,tint:cur.id==='custom'?cur.tint:paletteColors(cur).tint}
+    :{id};
+  prefSet(PALETTE_KEY,JSON.stringify(c));
+  applyPalette(c);
+  renderAppearance();
+}
+function onCustomColor(){
+  const c={id:'custom',accent:document.getElementById('apAccent').value,tint:document.getElementById('apTint').value};
+  prefSet(PALETTE_KEY,JSON.stringify(c));
+  applyPalette(c);
+  renderAppearance();
+}
 
 // ─── High-contrast presentation mode ────────────────────────────────────────
 function applyContrast(on){
@@ -820,11 +903,12 @@ function applyContrast(on){
     btn.title=on?'Hoher Kontrast: AN (für Beamer) — klicken zum Ausschalten':'Hoher Kontrast: AUS — klicken für Beamer-Modus';
   }
 }
-function isContrastOn(){return localStorage.getItem('sprintplanner-contrast')==='high';}
+function isContrastOn(){return prefGet('sprintplanner-contrast')==='high';}
 function toggleContrast(){
   const on=!isContrastOn();
-  localStorage.setItem('sprintplanner-contrast',on?'high':'normal');
+  prefSet('sprintplanner-contrast',on?'high':'normal');
   applyContrast(on);
+  if(typeof renderAppearance==='function')renderAppearance();
   if(typeof toast==='function')toast(on?'Hoher Kontrast aktiviert':'Hoher Kontrast deaktiviert','info');
 }
 // Apply stored contrast immediately to avoid flash
@@ -1018,6 +1102,54 @@ function forecastSprintEnd(k){
   d.setDate(d.getDate()+(k-1)*len);
   return d;
 }
+
+// ─── Color schemes ───────────────────────────────────────────────────────────
+// Presets from the Wiener Stadtwerke design system: websafe (WCAG AA on white; used for
+// applications), CI (original brand color), light (background tint).
+const PALETTES=[
+  {id:'wienit',     name:'Wien IT',            websafe:'#006274',ci:'#009BAC',light:'#EEFCFF'},
+  {id:'wstw',       name:'Wiener Stadtwerke',  websafe:'#000050',ci:'#000050',light:'#F3F3FF'},
+  {id:'wienenergie',name:'Wien Energie',       websafe:'#C04B11',ci:'#EC6827',light:'#FEF8F6'},
+  {id:'wienernetze',name:'Wiener Netze',       websafe:'#BB005D',ci:'#BB005D',light:'#FFF8FC'},
+  {id:'wienerlinien',name:'Wiener Linien',     websafe:'#E30014',ci:'#E30014',light:'#FFF7F8'},
+  {id:'wlb',        name:'Wiener Lokalbahnen', websafe:'#005792',ci:'#005792',light:'#F3FAFF'},
+  {id:'wipark',     name:'WIPARK',             websafe:'#066693',ci:'#0791CF',light:'#F0FAFE'},
+  {id:'bestattung', name:'Bestattung Wien',    websafe:'#7C689C',ci:'#7D6D9D',light:'#FFFFFF'},
+  {id:'friedhoefe', name:'Friedhöfe Wien',     websafe:'#657722',ci:'#798921',light:'#F8FAEF'},
+  {id:'gwsg',       name:'GWSG',               websafe:'#A21C28',ci:'#A21C28',light:'#FEF7F8'},
+  {id:'immoh',      name:'immOH!',             websafe:'#000050',ci:'#449775',light:'#F3F3FF'},
+  {id:'bfwien',     name:'BF Wien',            websafe:'#6F6F71',ci:'#868789',light:'#FCFCFC'},
+];
+function hexToRgb(h){h=String(h).replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return[n>>16&255,n>>8&255,n&255];}
+function rgbToHex(c){return'#'+c.map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');}
+// t = share of b in the mix
+function mixHex(a,b,t){const x=hexToRgb(a),y=hexToRgb(b);return rgbToHex(x.map((v,i)=>v+(y[i]-v)*t));}
+function luminance(h){return hexToRgb(h).map(v=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);}).reduce((s,v,i)=>s+v*[0.2126,0.7152,0.0722][i],0);}
+function contrastRatio(a,b){const[l1,l2]=[luminance(a),luminance(b)].sort((x,y)=>y-x);return(l1+0.05)/(l2+0.05);}
+// Step a color toward `to` until it reaches `ratio` against `bg`
+function toContrast(c,bg,ratio,to){let x=c;for(let i=0;i<60&&contrastRatio(x,bg)<ratio;i++)x=mixHex(x,to,0.05);return x;}
+// Theme tokens for an accent + background tint. Light: buttons/accents use the accent
+// (darkened to 4.5:1 on white if needed), text uses it darkened to 7:1. Dark: a lighter
+// variant (from the CI color) at 4.5:1 on the dark card color.
+function derivePalette({accent,ci,tint}){
+  const brand=toContrast(accent,'#ffffff',4.5,'#000000');
+  const text=toContrast(brand,'#ffffff',7,'#0b1416');
+  const darkBrand=toContrast(mixHex(ci||accent,'#ffffff',0.25),'#1e1e1c',4.5,'#ffffff');
+  const [r,g,b]=hexToRgb(text);
+  return{
+    brand,text,darkBrand,
+    light:{'--brand':brand,'--on-brand':'#ffffff','--text':text,'--accent-label':text,
+      '--text2':mixHex(text,'#ffffff',0.24),'--text3':mixHex(text,'#ffffff',0.48),
+      '--border':`rgba(${r},${g},${b},0.16)`,'--border2':`rgba(${r},${g},${b},0.28)`,
+      '--page':mixHex(tint||'#ffffff','#eceff1',0.5),'--surface':mixHex(brand,'#ffffff',0.92),
+      '--bg2':mixHex(brand,'#ffffff',0.9),'--bg3':mixHex(brand,'#ffffff',0.83)},
+    dark:{'--brand':darkBrand,'--on-brand':mixHex(darkBrand,'#000000',0.82),'--accent-label':mixHex(darkBrand,'#ffffff',0.25)},
+  };
+}
+
+// ─── End of pure calculations (tests/load-calc.js reads everything above) ───
+// Apply the saved color scheme now that PALETTES is defined (still before first paint)
+applyPalette(getPaletteChoice());
 
 // ─── Sprint navigation ────────────────────────────────────────────────────────
 function navigateSprint(dir){
@@ -1443,6 +1575,29 @@ function renderBacklogForecast(){
   h+='<dl class="fc-levels">'+[[.5,f.p50],[.85,f.p85],[.95,f.p95]].map(([p,k])=>
     `<div><dt>${pct(p)} sicher</dt><dd>${isFinite(k)?sprintsTxt(k):'> 52 Sprints'}</dd>${isFinite(k)&&forecastSprintEnd(k)?`<dd class="bl-date">${date(forecastSprintEnd(k))}</dd>`:''}</div>`).join('')+'</dl></div>';
   box.innerHTML=h;
+}
+function renderAppearance(){
+  const modeEl=document.getElementById('apMode');if(!modeEl)return;
+  const mode=getStoredTheme();
+  modeEl.innerHTML=[['system','System'],['light','Hell'],['dark','Dunkel']].map(([m,l])=>
+    `<button type="button" role="radio" aria-checked="${m===mode}" onclick="setThemeMode('${m}')">${l}</button>`).join('');
+  const c=getPaletteChoice();
+  const own=paletteColors(c.id==='custom'?c:{id:c.id});
+  document.getElementById('apPresets').innerHTML=PALETTES.map(p=>
+    `<button type="button" class="ap-preset" role="radio" aria-checked="${c.id===p.id}" onclick="choosePalette('${p.id}')" style="--sw:${p.websafe};--tint:${p.light}"><span class="ap-swatch" aria-hidden="true"></span><span>${p.name}</span></button>`).join('')+
+    `<button type="button" class="ap-preset" role="radio" aria-checked="${c.id==='custom'}" onclick="choosePalette('custom')" style="--sw:${c.id==='custom'?c.accent:own.accent};--tint:${c.id==='custom'?c.tint:own.tint}"><span class="ap-swatch is-custom" aria-hidden="true"></span><span>Eigene Farben</span></button>`;
+  const custom=document.getElementById('apCustom');
+  custom.hidden=c.id!=='custom';
+  const acc=document.getElementById('apAccent'),tint=document.getElementById('apTint');
+  if(document.activeElement!==acc)acc.value=own.accent.toLowerCase();
+  if(document.activeElement!==tint)tint.value=(own.tint||'#ffffff').toLowerCase();
+  const note=document.getElementById('apNote');
+  const hc=document.documentElement.getAttribute('data-contrast')==='high';
+  if(hc){note.textContent='Im Hochkontrast-Modus gelten feste Schwarz-Weiß-Farben.';note.dataset.tone='';}
+  else if(c.id==='custom'&&contrastRatio(own.accent,'#ffffff')<4.5){
+    note.textContent='Diese Farbe ist auf Weiß schwer lesbar. Für Buttons und Text wird automatisch eine dunklere Variante verwendet.';note.dataset.tone='warn';
+  }else{note.textContent='';note.dataset.tone='';}
+  document.getElementById('section-appearance').dataset.hc=hc?'1':'';
 }
 function renderSpGoalStatus(){
   const sp=curSprint();
@@ -2460,6 +2615,7 @@ function renderAll(){
   updateSprintNavUI();
   applyModules();
   renderModuleToggles();
+  renderAppearance();
 }
 
 // ─── Persistence (localStorage as live storage) ───────────────────────────────
