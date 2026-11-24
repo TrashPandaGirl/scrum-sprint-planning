@@ -563,8 +563,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="metric-value" id="kpiWorkdays">0</div>
         <div class="metric-sub" id="kpiWorkdaysSub">0 Feiertage</div>
         <div class="kpi-fields">
-          <div class="kpi-field"><label class="field-label" for="sprintStart">Start</label><input type="date" id="sprintStart" class="field-input" onchange="recalc()"></div>
-          <div class="kpi-field"><label class="field-label" for="sprintEnd">Ende</label><input type="date" id="sprintEnd" class="field-input" onchange="recalc()"></div>
+          <div class="kpi-field"><label class="field-label" for="sprintStart">Start</label><input type="date" id="sprintStart" class="field-input" onchange="onSprintDatesChange()"></div>
+          <div class="kpi-field"><label class="field-label" for="sprintEnd">Ende</label><input type="date" id="sprintEnd" class="field-input" onchange="onSprintDatesChange()"></div>
         </div>
       </div>
       <div class="metric-card">
@@ -1685,6 +1685,12 @@ function absDayKind(m,d){
   if(isHoliday(fmtDate(d)))return'holiday';
   if(!m.workDays.includes(d.getDay()))return'off';
   return'work';
+}
+// The absence grid has one column per sprint day, so new dates need a fresh grid.
+// recalc() alone leaves the grid in place on purpose (it runs during drag-painting).
+function onSprintDatesChange(){
+  recalc();
+  renderMemberAbsences();
 }
 function renderMemberAbsences(){
   const el=document.getElementById('memberAbsenceList');
